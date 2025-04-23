@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Histogramm: Gleiche vs. Ungleiche Klassenbreiten</title>
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']], // Inline-Mathematik mit $...$ oder \(...\)
+            displayMath: [['$$', '$$'], ['\\[', '\\]']] // Abgesetzte Mathematik mit $$...$$ oder \[...\]
+          },
+          svg: {
+            fontCache: 'global' // Verbessert die Performance
+          }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -49,10 +63,45 @@
              color: #c53030; /* Rote Warnfarbe */
              font-size: 0.9em;
          }
+         /* Style für die Variablen-Erklärung */
+         ul.variable-list {
+            list-style-type: none; /* Keine Aufzählungszeichen */
+            padding-left: 10px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+            color: #2d3748; /* Etwas dunkleres Grau */
+         }
+         ul.variable-list li {
+            margin-bottom: 5px;
+         }
+         ul.variable-list code {
+             /* Styling für Variablennamen */
+            font-weight: bold;
+            background-color: #edf2f7; /* Heller Hintergrund */
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace; /* Monospace Schriftart */
+         }
         /* Sicherstellen, dass Canvas responsive ist */
         canvas {
             max-width: 100%;
             height: auto;
+        }
+        /* Hilfsklasse für roten Rahmen */
+        .red-border-highlight {
+            border: 2px solid #c53030; /* Roter Rand */
+            padding: 15px; /* Innenabstand */
+            border-radius: 8px; /* Abgerundete Ecken */
+            margin-top: 15px;
+            margin-bottom: 15px;
+            background-color: #fff5f5; /* Sehr heller roter Hintergrund */
+        }
+        /* Stellt sicher, dass MathJax-Formeln zentriert sind und Abstand haben */
+        .formula-container {
+            text-align: center;
+            margin-bottom: 1rem; /* Abstand nach der Formel */
+            overflow-x: auto; /* Scrollbar auf kleinen Bildschirmen */
         }
     </style>
 </head>
@@ -75,7 +124,24 @@
     <div class="chart-container">
         <h2 class="text-xl font-semibold">Fall 2: Ungleiche Klassenbreiten (Korrekte Darstellung)</h2>
          <p class="description">
-            Haben die Klassen unterschiedliche Breiten $b_k$, muss die Höhe des Balkens als Häufigkeitsdichte $H_k = f_k / b_k$ berechnet werden. Nur so ist sichergestellt, dass der Flächeninhalt $A_k = b_k \cdot H_k = b_k \cdot (f_k / b_k) = f_k$ proportional (hier gleich) zur relativen Häufigkeit $f_k$ ist. Das Auge nimmt Flächen wahr, daher ist dies die korrekte Darstellung.
+            Haben die Klassen unterschiedliche Breiten $b_k$, muss die Höhe des Balkens als Häufigkeitsdichte $H_k$ berechnet werden. Nur so ist sichergestellt, dass der Flächeninhalt $A_k$ proportional zur <a href="https://herrbellusci.github.io/University/Beispiel_Histogramme.html" target="_blank" class="text-blue-600 hover:underline">relativen Häufigkeit $f_k$</a> ist. Das Auge nimmt Flächen wahr, daher ist dies die korrekte Darstellung.
+            <br><br>
+            Sei $b_k$ die Breite der Klasse $K_k$ und $H_k$ die Höhe des darüber errichteten Rechtecks. Üblicherweise setzt man die Fläche gleich der relativen Häufigkeit:
+            <div class="red-border-highlight">
+                <div class="formula-container">
+                    $$ A_k = b_k \cdot H_k = f_k \quad \implies \quad H_k = \frac{f_k}{b_k} = \frac{h_k}{n \cdot b_k} $$
+                </div>
+                Dabei bedeuten:
+                <ul class="variable-list">
+                    <li><code>$A_k$</code>: Flächeninhalt des Rechtecks über Klasse $k$ (proportional zur Häufigkeit)</li>
+                    <li><code>$b_k$</code>: Breite der Klasse $k$</li>
+                    <li><code>$H_k$</code>: Höhe des Rechtecks über Klasse $k$ (= Häufigkeitsdichte)</li>
+                    <li><code>$f_k$</code>: Relative Häufigkeit der Klasse $k$ ($f_k = h_k / n$)</li>
+                    <li><code>$h_k$</code>: Absolute Häufigkeit der Klasse $k$ (Anzahl Beobachtungen in Klasse $k$)</li>
+                    <li><code>$n$</code>: Gesamtzahl der Beobachtungen (Stichprobenumfang)</li>
+                </ul>
+                 Die Höhe $H_k$ wird als \textbf{Häufigkeitsdichte} bezeichnet. Sie gibt an, wie dicht die Daten pro Einheitsbreite in dieser Klasse liegen.
+            </div>
         </p>
         <canvas id="histogramUnequalWidthCorrect"></canvas>
         <p class="info">Y-Achse zeigt Häufigkeitsdichte. Beachte die unterschiedlichen Klassenbreiten (15, 5, 20) in den Labels.</p>
@@ -287,3 +353,4 @@
 
 </body>
 </html>
+
