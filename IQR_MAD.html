@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualisierung: IQR & MAD</title>
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .content-section {
+            width: 90%;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 25px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        .visualization-container {
+             margin-top: 20px;
+             padding-top: 20px;
+             border-top: 1px dashed #d1d5db;
+             position: relative; /* Für absolute Positionierung */
+        }
+        h1, h2, h3 {
+            text-align: center;
+            color: #111827;
+            margin-bottom: 0.75rem;
+        }
+        h1 { margin-bottom: 1.5rem;}
+        p, li {
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+        ul { list-style-position: inside; margin-left: 5px;}
+        code {
+            background-color: #f3f4f6;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .formula { text-align: center; margin: 1rem 0; font-size: 1.1em;}
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive Grid */
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .result-item {
+            background-color: #f9fafb;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        .result-item span { font-weight: 600; }
+        .iqr-color { color: #059669; } /* Dunkelgrün */
+        .mad-median-color { color: #ef4444; } /* Rot */
+        .mad-mean-color { color: #3b82f6; } /* Blau */
+
+        /* SVG Styling */
+        .data-point { fill: #6b7280; /* Grau */ }
+        .outlier-point { fill: #f97316; /* Orange */ }
+        .quartile-line { stroke: #10b981; stroke-width: 2; } /* Grün */
+        .median-line { stroke: #ef4444; stroke-width: 2; } /* Rot */
+        .iqr-box { fill: rgba(5, 150, 105, 0.1); stroke: #059669; stroke-width: 1; } /* Hellgrün mit Rand */
+        .mean-marker { fill: #3b82f6; } /* Blau */
+        .axis-line { stroke: #9ca3af; stroke-width: 1; }
+        .axis-text { font-size: 0.7rem; fill: #6b7280; }
+        .label-text { font-size: 0.75rem; font-weight: 500; }
+        .q1-text { fill: #059669; }
+        .q3-text { fill: #059669; }
+        .median-text { fill: #ef4444; }
+        .mean-text { fill: #3b82f6; }
+
+         /* Tooltip Styling */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-6">
+
+    <h1 class="text-3xl font-bold">Interquartilsabstand (IQR) & Mittlere Absolute Abweichung (MAD)</h1>
+
+    <div class="content-section">
+        <h2 class="text-xl font-semibold">Interquartilsabstand (IQR)</h2>
+        <p>
+            Der IQR misst die Streuung der mittleren 50% der Daten. Er ist die Differenz zwischen dem oberen Quartil ($Q_3$, 75%-Quantil) und dem unteren Quartil ($Q_1$, 25%-Quantil).
+        </p>
+        <div class="formula">
+            $$ IQR = Q_3 - Q_1 $$
+        </div>
+        <h3 class="text-lg font-medium mt-4 mb-2">Eigenschaften:</h3>
+        <ul>
+            <li><strong>Robust gegen Ausreißer:</strong> Da die äußeren 25% der Daten oben und unten ignoriert werden, wird der IQR von extremen Werten kaum beeinflusst.</li>
+            <li>Beschreibt die Streuung des "Hauptteils" der Daten.</li>
+        </ul>
+    </div>
+
+    <div class="content-section">
+        <h2 class="text-xl font-semibold">Mittlere Absolute Abweichung (MAD)</h2>
+        <p>
+            Die MAD misst die durchschnittliche absolute Abweichung aller Datenpunkte $x_i$ von einem Zentralwert $z$. Als Zentralwert wird häufig der Median ($\tilde{x}$) oder das arithmetische Mittel ($\bar{x}$) verwendet.
+        </p>
+        <div class="formula">
+            $$ MAD_z = \frac{1}{n} \sum_{i=1}^{n} |x_i - z| $$
+        </div>
+         <h3 class="text-lg font-medium mt-4 mb-2">Eigenschaften:</h3>
+        <ul>
+            <li>Berücksichtigt alle Datenpunkte.</li>
+            <li>Die MAD vom Median ($MAD_{\tilde{x}}$) ist immer kleiner oder gleich der MAD vom Mittelwert ($MAD_{\bar{x}}$).</li>
+            <li>Weniger empfindlich gegenüber Ausreißern als die Standardabweichung (da Abweichungen nicht quadriert werden), aber empfindlicher als der IQR.</li>
+        </ul>
+    </div>
+
+    <div class="content-section">
+        <h2 class="text-xl font-semibold">Visualisierung & Berechnung</h2>
+        <div class="mb-4">
+            <label for="dataInput" class="block text-sm font-medium text-gray-700 mb-1">Datenpunkte (kommagetrennt):</label>
+            <input type="text" id="dataInput" class="w-full p-2 border border-gray-300 rounded shadow-sm" value="10, 15, 16, 18, 20, 21, 22, 25, 30, 55">
+             <button id="updateBtn" class="mt-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Aktualisieren</button>
+             <p class="text-xs text-gray-500 mt-1">Beispiel: 10, 15, 16, 18, 20, 21, 22, 25, 30, 55 (enthält einen Ausreißer: 55)</p>
+        </div>
+
+        <div class="visualization-container">
+             <svg id="visualizationSVG" width="100%" height="150"></svg>
+        </div>
+
+        <div class="results-grid">
+            <div class="result-item">Daten (sortiert):<br><span id="sortedDataDisplay" class="text-sm font-mono"></span></div>
+            <div class="result-item">Q1 (Unteres Quartil):<br><span id="q1Display" class="q1-text text-lg"></span></div>
+            <div class="result-item">Median (Q2):<br><span id="medianDisplay" class="median-text text-lg"></span></div>
+            <div class="result-item">Q3 (Oberes Quartil):<br><span id="q3Display" class="q3-text text-lg"></span></div>
+            <div class="result-item">IQR (Q3 - Q1):<br><span id="iqrDisplay" class="iqr-color text-lg"></span></div>
+            <div class="result-item">Mittelwert ($\bar{x}$):<br><span id="meanDisplay" class="mittelwert text-lg"></span></div>
+            <div class="result-item">MAD vom Median:<br><span id="madMedianDisplay" class="mad-median-color text-lg"></span></div>
+            <div class="result-item">MAD vom Mittelwert:<br><span id="madMeanDisplay" class="mad-mean-color text-lg"></span></div>
+        </div>
+         <p class="text-sm text-gray-500 mt-4 text-center">Beachte, wie der Ausreißer (z.B. 55) den Mittelwert und die MAD vom Mittelwert stärker beeinflusst als den Median, Q1, Q3, IQR und die MAD vom Median.</p>
+    </div>
+
+     <div id="tooltip" class="tooltip"></div>
+
+
+    <script>
+        // --- Initialisierung ---
+        const dataInput = document.getElementById('dataInput');
+        const updateBtn = document.getElementById('updateBtn');
+        const svg = document.getElementById('visualizationSVG');
+        const sortedDataDisplay = document.getElementById('sortedDataDisplay');
+        const q1Display = document.getElementById('q1Display');
+        const medianDisplay = document.getElementById('medianDisplay');
+        const q3Display = document.getElementById('q3Display');
+        const iqrDisplay = document.getElementById('iqrDisplay');
+        const meanDisplay = document.getElementById('meanDisplay');
+        const madMedianDisplay = document.getElementById('madMedianDisplay');
+        const madMeanDisplay = document.getElementById('madMeanDisplay');
+        const tooltip = document.getElementById('tooltip');
+
+        let currentData = [];
+
+        // --- Berechnungsfunktionen ---
+
+        // Berechnet Quantile (Methode: R-7, Excel-Standard)
+        function calculateQuantile(sortedData, p) {
+            if (sortedData.length === 0) return NaN;
+            const index = p * (sortedData.length - 1); // Index nach R-7
+            const lowerIndex = Math.floor(index);
+            const upperIndex = Math.ceil(index);
+
+            if (lowerIndex === upperIndex) {
+                return sortedData[lowerIndex];
+            } else {
+                // Lineare Interpolation
+                const weight = index - lowerIndex;
+                return sortedData[lowerIndex] * (1 - weight) + sortedData[upperIndex] * weight;
+            }
+        }
+
+        function calculateMean(data) {
+             if (data.length === 0) return NaN;
+             const sum = data.reduce((acc, val) => acc + val, 0);
+             return sum / data.length;
+        }
+
+        function calculateMAD(data, center) {
+            if (data.length === 0) return NaN;
+            const sumAbsDev = data.reduce((acc, val) => acc + Math.abs(val - center), 0);
+            return sumAbsDev / data.length;
+        }
+
+        // --- Visualisierungsfunktion ---
+        function visualize() {
+            // 1. Daten holen und validieren
+            const inputText = dataInput.value.trim();
+            currentData = inputText.split(',')
+                                   .map(s => parseFloat(s.trim()))
+                                   .filter(n => !isNaN(n)); // Nur gültige Zahlen behalten
+
+            if (currentData.length < 2) {
+                // Nicht genug Daten für sinnvolle Berechnung/Visualisierung
+                svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#ef4444">Bitte mindestens 2 gültige, kommagetrennte Zahlen eingeben.</text>';
+                // Reset displays
+                 sortedDataDisplay.textContent = '-';
+                 q1Display.textContent = '-';
+                 medianDisplay.textContent = '-';
+                 q3Display.textContent = '-';
+                 iqrDisplay.textContent = '-';
+                 meanDisplay.textContent = '-';
+                 madMedianDisplay.textContent = '-';
+                 madMeanDisplay.textContent = '-';
+                return;
+            }
+
+            // 2. Berechnungen
+            const sortedData = [...currentData].sort((a, b) => a - b);
+            const q1 = calculateQuantile(sortedData, 0.25);
+            const median = calculateQuantile(sortedData, 0.50); // Median ist Q2
+            const q3 = calculateQuantile(sortedData, 0.75);
+            const iqr = q3 - q1;
+            const mean = calculateMean(sortedData);
+            const madMedian = calculateMAD(sortedData, median);
+            const madMean = calculateMAD(sortedData, mean);
+
+            // 3. Ergebnisse anzeigen
+            sortedDataDisplay.textContent = sortedData.join(', ');
+            q1Display.textContent = q1.toFixed(2);
+            medianDisplay.textContent = median.toFixed(2);
+            q3Display.textContent = q3.toFixed(2);
+            iqrDisplay.textContent = iqr.toFixed(2);
+            meanDisplay.textContent = mean.toFixed(2);
+            madMedianDisplay.textContent = madMedian.toFixed(2);
+            madMeanDisplay.textContent = madMean.toFixed(2);
+
+            // 4. SVG zeichnen
+            svg.innerHTML = ''; // Alte Elemente entfernen
+            const padding = 40;
+            const svgWidth = svg.clientWidth;
+            const svgHeight = svg.clientHeight;
+            const axisY = svgHeight * 0.7; // Achse weiter unten
+            const boxY = svgHeight * 0.3; // Y-Position für Boxplot-Elemente
+            const boxHeight = svgHeight * 0.25; // Höhe der Box
+
+            const dataMin = sortedData[0];
+            const dataMax = sortedData[sortedData.length - 1];
+            // Skala mit etwas Puffer
+            const scaleMin = Math.min(dataMin, mean) - iqr * 0.5; // Puffer basierend auf IQR
+            const scaleMax = Math.max(dataMax, mean) + iqr * 0.5;
+            const scaleRange = scaleMax - scaleMin === 0 ? 1 : scaleMax - scaleMin;
+
+            function scaleX(value) {
+                 if (scaleRange === 0) return svgWidth / 2;
+                 return padding + ((value - scaleMin) / scaleRange) * (svgWidth - 2 * padding);
+            }
+
+            // Achse zeichnen
+            const axisLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            axisLine.setAttribute('x1', padding / 2);
+            axisLine.setAttribute('y1', axisY);
+            axisLine.setAttribute('x2', svgWidth - padding / 2);
+            axisLine.setAttribute('y2', axisY);
+            axisLine.classList.add('axis-line');
+            svg.appendChild(axisLine);
+
+            // Achsen-Ticks und Beschriftung (vereinfacht)
+            [scaleMin, q1, median, q3, scaleMax].forEach(val => {
+                 const x = scaleX(val);
+                 const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                 tick.setAttribute('x1', x);
+                 tick.setAttribute('y1', axisY - 3);
+                 tick.setAttribute('x2', x);
+                 tick.setAttribute('y2', axisY + 3);
+                 tick.classList.add('axis-line');
+                 svg.appendChild(tick);
+                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                 text.setAttribute('x', x);
+                 text.setAttribute('y', axisY + 15);
+                 text.setAttribute('text-anchor', 'middle');
+                 text.classList.add('axis-text');
+                 text.textContent = val.toFixed(1);
+                 svg.appendChild(text);
+            });
+
+
+            // Boxplot-Elemente (IQR Box)
+            const q1X = scaleX(q1);
+            const q3X = scaleX(q3);
+            const iqrBox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            iqrBox.setAttribute('x', q1X);
+            iqrBox.setAttribute('y', boxY);
+            iqrBox.setAttribute('width', q3X - q1X);
+            iqrBox.setAttribute('height', boxHeight);
+            iqrBox.classList.add('iqr-box');
+            iqrBox.addEventListener('mouseover', (e) => showTooltip(e, `IQR = ${iqr.toFixed(2)}`));
+            iqrBox.addEventListener('mousemove', moveTooltip);
+            iqrBox.addEventListener('mouseout', hideTooltip);
+            svg.appendChild(iqrBox);
+
+            // Median-Linie in der Box
+            const medianX = scaleX(median);
+            const medianLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            medianLine.setAttribute('x1', medianX);
+            medianLine.setAttribute('y1', boxY);
+            medianLine.setAttribute('x2', medianX);
+            medianLine.setAttribute('y2', boxY + boxHeight);
+            medianLine.classList.add('median-line');
+            medianLine.addEventListener('mouseover', (e) => showTooltip(e, `Median = ${median.toFixed(2)}`));
+            medianLine.addEventListener('mousemove', moveTooltip);
+            medianLine.addEventListener('mouseout', hideTooltip);
+            svg.appendChild(medianLine);
+
+             // Whiskers (Linien von Q1/Q3 zum Min/Max - hier vereinfacht zu den Datenpunkten)
+             const whiskerLeft = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+             whiskerLeft.setAttribute('x1', scaleX(dataMin));
+             whiskerLeft.setAttribute('y1', boxY + boxHeight / 2);
+             whiskerLeft.setAttribute('x2', q1X);
+             whiskerLeft.setAttribute('y2', boxY + boxHeight / 2);
+             whiskerLeft.classList.add('quartile-line'); // Gleiche Farbe wie Quartile
+             svg.appendChild(whiskerLeft);
+
+             const whiskerRight = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+             whiskerRight.setAttribute('x1', q3X);
+             whiskerRight.setAttribute('y1', boxY + boxHeight / 2);
+             whiskerRight.setAttribute('x2', scaleX(dataMax));
+             whiskerRight.setAttribute('y2', boxY + boxHeight / 2);
+             whiskerRight.classList.add('quartile-line');
+             svg.appendChild(whiskerRight);
+
+
+            // Datenpunkte auf der Achse darstellen
+            // Identifiziere Ausreißer (einfache Methode: außerhalb 1.5*IQR von Q1/Q3)
+            const lowerBound = q1 - 1.5 * iqr;
+            const upperBound = q3 + 1.5 * iqr;
+
+            sortedData.forEach(value => {
+                const cx = scaleX(value);
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', axisY);
+                circle.setAttribute('r', 4);
+                if (value < lowerBound || value > upperBound) {
+                     circle.classList.add('outlier-point'); // Ausreißer hervorheben
+                     circle.addEventListener('mouseover', (e) => showTooltip(e, `Ausreißer: ${value}`));
+                } else {
+                     circle.classList.add('data-point');
+                     circle.addEventListener('mouseover', (e) => showTooltip(e, `x = ${value}`));
+                }
+                 circle.addEventListener('mousemove', moveTooltip);
+                 circle.addEventListener('mouseout', hideTooltip);
+                svg.appendChild(circle);
+            });
+
+             // Mittelwert markieren (oberhalb der Box)
+             const meanX = scaleX(mean);
+             const meanMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+             meanMarker.setAttribute('cx', meanX);
+             meanMarker.setAttribute('cy', boxY - 10); // Etwas über der Box
+             meanMarker.setAttribute('r', 4);
+             meanMarker.classList.add('mean-marker');
+             meanMarker.addEventListener('mouseover', (e) => showTooltip(e, `Mittelwert = ${mean.toFixed(2)}`));
+             meanMarker.addEventListener('mousemove', moveTooltip);
+             meanMarker.addEventListener('mouseout', hideTooltip);
+             svg.appendChild(meanMarker);
+
+             // Labels für Q1, Median, Q3 (unterhalb der Box)
+             const labelY = boxY + boxHeight + 15;
+             const q1Text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             q1Text.setAttribute('x', q1X);
+             q1Text.setAttribute('y', labelY);
+             q1Text.setAttribute('text-anchor', 'middle');
+             q1Text.classList.add('label-text', 'q1-text');
+             q1Text.textContent = 'Q1';
+             svg.appendChild(q1Text);
+
+             const medianTextSvg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             medianTextSvg.setAttribute('x', medianX);
+             medianTextSvg.setAttribute('y', labelY);
+             medianTextSvg.setAttribute('text-anchor', 'middle');
+             medianTextSvg.classList.add('label-text', 'median-text');
+             medianTextSvg.textContent = 'Median';
+             svg.appendChild(medianTextSvg);
+
+             const q3Text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             q3Text.setAttribute('x', q3X);
+             q3Text.setAttribute('y', labelY);
+             q3Text.setAttribute('text-anchor', 'middle');
+             q3Text.classList.add('label-text', 'q3-text');
+             q3Text.textContent = 'Q3';
+             svg.appendChild(q3Text);
+
+             // Label für Mittelwert
+             const meanTextSvg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             meanTextSvg.setAttribute('x', meanX);
+             meanTextSvg.setAttribute('y', boxY - 20); // Über dem Marker
+             meanTextSvg.setAttribute('text-anchor', 'middle');
+             meanTextSvg.classList.add('label-text', 'mean-text');
+             meanTextSvg.textContent = 'Mittelwert';
+             svg.appendChild(meanTextSvg);
+        }
+
+         // --- Tooltip Funktionen ---
+         function showTooltip(event, text) {
+             tooltip.textContent = text;
+             tooltip.style.opacity = '1';
+             moveTooltip(event);
+         }
+         function moveTooltip(event) {
+             tooltip.style.left = `${event.pageX + 10}px`;
+             tooltip.style.top = `${event.pageY + 10}px`;
+         }
+         function hideTooltip() {
+             tooltip.style.opacity = '0';
+         }
+
+        // --- Event Listener ---
+        updateBtn.addEventListener('click', visualize);
+        window.addEventListener('resize', visualize); // Neu zeichnen bei Größenänderung
+
+        // --- Initialer Aufruf ---
+        visualize();
+
+    </script>
+
+</body>
+</html>
