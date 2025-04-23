@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistik Visualisierung (Interaktiv)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* Slightly lighter gray background */
+        }
+        .topic-box {
+            border: 1px solid #6b7280; /* Darker gray border */
+            background-color: #3b82f6; /* Brighter blue background */
+            color: #ffffff; /* White text */
+            border-radius: 0.5rem; /* More rounded corners */
+            padding: 1rem 1.25rem;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-bottom: 1rem; /* Increased space below main topic */
+            font-weight: 600; /* Semibold */
+        }
+        .sub-topic-box {
+            border: 1px solid #93c5fd; /* Lighter blue border */
+            background-color: #eff6ff; /* Very light blue background */
+            color: #1e40af; /* Darker blue text */
+            border-radius: 0.375rem; /* Rounded corners */
+            padding: 0.75rem 1rem; /* Increased padding */
+            text-align: left; /* Align text left for better readability */
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Space for potential icon */
+            font-size: 0.9rem; /* Slightly larger font */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            margin-top: 0.75rem; /* Increased space */
+            margin-left: 0rem; /* Remove left margin, handled by padding */
+            cursor: pointer; /* Indicate clickable */
+            transition: background-color 0.2s ease-in-out;
+        }
+        .sub-topic-box:hover {
+            background-color: #dbeafe; /* Slightly darker on hover */
+        }
+        .sub-topic-box.active {
+             background-color: #bfdbfe; /* Even darker when active/open */
+             border-color: #60a5fa;
+        }
+        .info-panel {
+            display: none; /* Hidden by default */
+            background-color: #ffffff; /* White background for info */
+            border: 1px solid #d1d5db; /* Gray border */
+            border-top: none; /* No top border as it connects */
+            border-radius: 0 0 0.375rem 0.375rem; /* Rounded bottom corners */
+            padding: 1rem;
+            margin-top: -1px; /* Overlap slightly with box above */
+            font-size: 0.875rem;
+            color: #374151; /* Dark gray text */
+            line-height: 1.5;
+        }
+        .info-panel.show {
+            display: block; /* Show when active */
+        }
+        .category-column {
+            padding: 0.5rem; /* Reduced padding */
+            /* Removed border for cleaner look, separation by gap */
+        }
+        /* Simple arrow indicator */
+        .arrow {
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid #1e40af; /* Arrow color */
+            transition: transform 0.3s ease;
+            margin-left: 10px;
+        }
+        .arrow.up {
+            transform: rotate(180deg);
+        }
+         /* Style for definition terms */
+        .info-panel dt {
+            font-weight: 600;
+            margin-top: 0.5rem;
+            color: #111827; /* Slightly darker */
+        }
+        /* Style for definition descriptions */
+        .info-panel dd {
+            margin-left: 1rem;
+            margin-bottom: 0.5rem;
+        }
+         /* Style for examples */
+        .info-panel .example {
+            background-color: #f3f4f6;
+            border-left: 3px solid #9ca3af;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem 0;
+            font-style: italic;
+        }
+         /* Style for list items */
+        .info-panel ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+            margin-top: 0.25rem;
+        }
+        .info-panel code {
+             background-color: #e5e7eb;
+             padding: 0.1rem 0.3rem;
+             border-radius: 0.25rem;
+             font-family: monospace;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <h1 class="text-3xl font-bold text-center mb-10 text-gray-800">Statistik</h1>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-6">
+
+        <div class="category-column">
+            <div class="topic-box">1. Grundlagen</div>
+            <div class="pl-0"> <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-grundbegriffe', this)">
+                        <span>Grundbegriffe</span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div id="info-grundbegriffe" class="info-panel">
+                        <p>Zentrale Begriffe für das Verständnis von Datenanalysen.</p>
+                        <dl>
+                            <dt>Univariate Daten</dt>
+                            <dd>Analyse von nur <strong>einer Variable</strong> pro Beobachtungseinheit (z.B. Verteilung von Klausurpunkten).</dd>
+                            <dt>Bivariate Daten</dt>
+                            <dd>Analyse von <strong>zwei Variablen</strong> gleichzeitig, um Zusammenhänge zu untersuchen (z.B. Lernaufwand und Klausurpunkte).</dd>
+                            <dt>Multivariate Daten</dt>
+                            <dd>Analyse von <strong>drei oder mehr Variablen</strong> gleichzeitig (z.B. Einfluss von Lernaufwand, Abi-Note, Motivation auf Klausurerfolg).</dd>
+                            <dt>Grundgesamtheit (Population)</dt>
+                            <dd>Vollständige Menge aller potenziellen Untersuchungseinheiten (z.B. alle Wahlberechtigten).</dd>
+                            <dt>Stichprobe (Sample)</dt>
+                            <dd>Teilmenge der Grundgesamtheit, die tatsächlich untersucht wird.</dd>
+                            <dt>Merkmal (Variable)</dt>
+                            <dd>Eigenschaft, die bei Untersuchungseinheiten erfasst wird (z.B. Körpergröße).</dd>
+                            <dt>Merkmalsausprägung</dt>
+                            <dd>Konkreter Wert eines Merkmals (z.B. Körpergröße = 175 cm).</dd>
+                            <dt>Deskriptive Statistik</dt>
+                            <dd>Beschreibende Statistik; Darstellung und Zusammenfassung von Stichprobendaten (Tabellen, Grafiken, Kennzahlen).</dd>
+                            <dt>Inferenzstatistik</dt>
+                            <dd>Schließende Statistik; Rückschlüsse von der Stichprobe auf die Grundgesamtheit (Schätzen, Testen).</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-skalenniveaus', this)">
+                        <span>Skalenniveaus</span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div id="info-skalenniveaus" class="info-panel">
+                        <p>Klassifizieren Merkmale nach Art ihrer Ausprägungen und erlaubten Operationen:</p>
+                        <ul>
+                            <li><strong>Nominalskala:</strong> Reine Kategorien ohne Rangfolge (z.B. Farbe, Nationalität). Operationen: Gleich/Ungleich.</li>
+                            <li><strong>Ordinalskala:</strong> Kategorien mit Rangfolge, Abstände nicht quantifizierbar (z.B. Bildungsabschluss, Zufriedenheit). Operationen: Gleich/Ungleich, Größer/Kleiner.</li>
+                            <li><strong>Intervallskala:</strong> Geordnete Werte mit gleichen Abständen, kein natürlicher Nullpunkt (z.B. Temperatur in °C, Jahr). Operationen: Wie Ordinal + Addition/Subtraktion von Differenzen.</li>
+                            <li><strong>Verhältnisskala (Ratioskala):</strong> Wie Intervall, aber mit natürlichem Nullpunkt (z.B. Größe in cm, Alter, Preis). Operationen: Alle Grundrechenarten, Verhältnisbildung.</li>
+                        </ul>
+                        <p>Nominal/Ordinal = <strong>kategorial/qualitativ</strong>. Intervall/Verhältnis = <strong>metrisch/quantitativ</strong>.</p>
+                    </div>
+                </div>
+
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-haeufigkeit', this)">
+                        <span>Häufigkeitsverteilung univariater Daten</span>
+                         <span class="arrow"></span>
+                    </div>
+                    <div id="info-haeufigkeit" class="info-panel">
+                        <dl>
+                            <dt>Relative / Absolute Häufigkeit</dt>
+                            <dd><strong>Absolute Häufigkeit (h<sub>i</sub>):</strong> Anzahl, wie oft eine Ausprägung vorkommt.<br>
+                               <strong>Relative Häufigkeit (f<sub>i</sub>):</strong> Anteil der Ausprägung an der Gesamtzahl (f<sub>i</sub> = h<sub>i</sub> / N). Oft in Prozent.</dd>
+                            <dt>Summenhäufigkeit</dt>
+                            <dd><strong>Absolute Summenhäufigkeit (H<sub>i</sub>):</strong> Anzahl der Beobachtungen mit dieser oder einer "kleineren" Ausprägung (aufaddierte absolute Häufigkeiten).<br>
+                               <strong>Relative Summenhäufigkeit (F<sub>i</sub>):</strong> Anteil der Beobachtungen mit dieser oder einer "kleineren" Ausprägung (aufaddierte relative Häufigkeiten, F<sub>i</sub> = H<sub>i</sub> / N).</dd>
+                             <dt>Histogramm</dt>
+                            <dd>Grafische Darstellung klassierter Daten. Besteht aus Rechtecken über Klassenintervallen. Der <strong>Flächeninhalt</strong> jedes Rechtecks ist proportional zur (relativen) Häufigkeit der Klasse. Bei ungleichen Klassenbreiten muss die Höhe als <strong>Häufigkeitsdichte</strong> (Häufigkeit / Klassenbreite) berechnet werden.</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-lage-streuung', this)">
+                        <span>Lageparameter und Streuungsmaße</span>
+                         <span class="arrow"></span>
+                    </div>
+                    <div id="info-lage-streuung" class="info-panel">
+                         <dl>
+                            <dt>Lagemaße (Zentrale Tendenz)</dt>
+                            <dd>Beschreiben das "Zentrum" der Daten.</dd>
+                            <dd><ul>
+                                <li><strong>Modus (Modalwert):</strong> Häufigste Ausprägung. Für alle Skalenniveaus.</li>
+                                <li><strong>Median:</strong> Wert, der die sortierten Daten halbiert (50% darunter, 50% darüber). Mind. Ordinalskala. Robust gegen Ausreißer. Minimiert Summe der absoluten Abweichungen.</li>
+                                <li><strong>Quartile/Quantile:</strong> Teilen die sortierten Daten in Abschnitte (z.B. Quartile Q1, Q2=Median, Q3 teilen in 4 Viertel). Mind. Ordinalskala.</li>
+                                <li><strong>Arithmetisches Mittel (Durchschnitt):</strong> Summe aller Werte / Anzahl. Metrische Skalen. Empfindlich für Ausreißer. Minimiert Summe der quadrierten Abweichungen (Schwerpunkteigenschaft).</li>
+                                <li><strong>Geometrisches Mittel:</strong> n-te Wurzel des Produkts von n Werten. Für Wachstumsfaktoren/relative Änderungen.</li>
+                                <li><strong>Harmonisches Mittel:</strong> Für Raten (z.B. km/h), wenn über gleiche Strecken/Mengen gemittelt wird.</li>
+                            </ul></dd>
+                             <dt>Streuungsmaße (Dispersion)</dt>
+                            <dd>Beschreiben die Variabilität der Daten.</dd>
+                             <dd><ul>
+                                <li><strong>Spannweite (Range):</strong> Differenz zwischen Maximum und Minimum. Sehr ausreißerempfindlich.</li>
+                                <li><strong>Interquartilsabstand (IQR):</strong> Differenz Q3 - Q1. Spannweite der mittleren 50%. Robust gegen Ausreißer.</li>
+                                <li><strong>Varianz (s²):</strong> Mittlere quadratische Abweichung vom arithmetischen Mittel. Metrische Skalen. Quadrierte Einheit.</li>
+                                <li><strong>Standardabweichung (s):</strong> Wurzel aus der Varianz. Gleiche Einheit wie Daten. Maß für durchschnittliche Abweichung vom Mittelwert. Ausreißerempfindlich.</li>
+                                </ul></dd>
+                             <dt>Boxplot</dt>
+                             <dd>Grafische Darstellung basierend auf Median, Quartilen und IQR. Visualisiert Lage, Streuung und mögliche Ausreißer.</dd>
+                         </dl>
+                    </div>
+                </div>
+                 <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-staengel-blatt', this)">
+                        <span>Stängel-Blatt-Diagramm</span>
+                        <span class="arrow"></span>
+                    </div>
+                    <div id="info-staengel-blatt" class="info-panel">
+                        <p>Einfache Methode zur Darstellung der Verteilung quantitativer Daten, erhält die Datenwerte (teilweise).</p>
+                        <p><strong>Aufbau:</strong> Jeder Datenwert wird in "Stängel" (führende Ziffern) und "Blatt" (letzte Ziffer) geteilt. Stängel werden vertikal, Blätter horizontal daneben aufgetragen.</p>
+                        <div class="example">
+                            Daten: 23, 28, 33, 33, 39<br>
+                            Stängel | Blätter<br>
+                            -------|--------<br>
+                            2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| 3 8<br>
+                            3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| 3 3 9<br>
+                            <em>Legende: 2 | 3 bedeutet 23</em>
+                        </div>
+                        <p><strong>Nutzen:</strong> Zeigt Verteilungsform, Wertebereich, Dichte, Ausreißer.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category-column">
+            <div class="topic-box">2. Standardisierungen</div>
+            <div class="pl-0">
+                <div class="sub-topic-box">Variationskoeffizient</div>
+                <div class="sub-topic-box">Z-Transformation</div>
+                <div class="sub-topic-box">(Standard) Normalverteilung</div>
+                <div class="sub-topic-box">Exkurs: diskrete und stetige Zufallsvariablen bzw. Wahrscheinlichkeits(dichte)funktion</div>
+                <div class="sub-topic-box">z-Werte bei Standardnormalverteilung</div>
+            </div>
+        </div>
+
+        <div class="category-column">
+            <div class="topic-box">3. Schätzstatistik</div>
+             <div class="pl-0">
+                <div class="sub-topic-box">Stichprobenverteilung</div>
+                <div class="sub-topic-box">Punktschätzung</div>
+                <div class="sub-topic-box">Konfidenzintervall</div>
+            </div>
+        </div>
+
+        <div class="category-column">
+            <div class="topic-box">4. Lineare Regression</div>
+             <div class="pl-0">
+                <div class="sub-topic-box">Regressionsanalyse</div>
+                <div class="sub-topic-box">Bestimmtheitsmaß R²</div>
+            </div>
+        </div>
+
+        <div class="category-column">
+            <div class="topic-box">5. Korrelation</div>
+             <div class="pl-0">
+                <div class="sub-topic-box">Kovarianz</div>
+                <div class="sub-topic-box">Korrelationskoeffizient nach P&B</div>
+                <div class="sub-topic-box">Rangkorrelation nach Spearman</div>
+            </div>
+        </div>
+
+        <div class="category-column">
+            <div class="topic-box">6. Kontingenztabelle/-tafel</div>
+             <div class="pl-0">
+                <div class="sub-topic-box">Erwartungswert</div>
+                <div class="sub-topic-box">Kontingenzkoeffizient &chi;&sup2;</div> </div>
+        </div>
+
+        <div class="category-column">
+            <div class="topic-box">7. Testtheorie</div>
+             <div class="pl-0">
+                <div class="sub-topic-box">Binomialtest</div>
+                <div class="sub-topic-box">Gaußtest / z-Test</div>
+                <div class="sub-topic-box">&chi;&sup2;-Test</div> </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Simple toggle function for info panels
+        function toggleInfo(panelId, clickedElement) {
+            const panel = document.getElementById(panelId);
+            const arrow = clickedElement.querySelector('.arrow');
+
+            if (panel.classList.contains('show')) {
+                panel.classList.remove('show');
+                clickedElement.classList.remove('active');
+                if (arrow) arrow.classList.remove('up');
+            } else {
+                 // Optional: Close other panels in the same column if needed
+                 // const parentColumn = clickedElement.closest('.category-column');
+                 // if (parentColumn) {
+                 //    parentColumn.querySelectorAll('.info-panel.show').forEach(openPanel => {
+                 //        openPanel.classList.remove('show');
+                 //        openPanel.previousElementSibling.classList.remove('active');
+                 //        const openArrow = openPanel.previousElementSibling.querySelector('.arrow');
+                 //        if (openArrow) openArrow.classList.remove('up');
+                 //    });
+                 // }
+
+                panel.classList.add('show');
+                clickedElement.classList.add('active');
+                 if (arrow) arrow.classList.add('up');
+            }
+        }
+    </script>
+
+</body>
+</html>
