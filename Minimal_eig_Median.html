@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimaleigenschaft des Medians</title>
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Styling für SVG-Elemente */
+        .data-point { fill: #3b82f6; /* Blau */ }
+        .median-marker { fill: #ef4444; /* Rot */ }
+        .c-marker { fill: #f97316; /* Orange */ } /* Farbe für Punkt c */
+        .median-line { stroke: #ef4444; stroke-width: 1; }
+        .c-line { stroke: #f97316; stroke-width: 1; } /* Farbe für Linien zu c */
+        .median-text { fill: #ef4444; font-size: 0.8rem; font-weight: bold; }
+        .c-text { fill: #f97316; font-size: 0.8rem; font-weight: bold; } /* Farbe für Text c */
+
+         /* Zentrierung für Formel */
+         .formula-container {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.1em;
+         }
+         /* Container für Visualisierung */
+         .visualization-container {
+             width: 95%;
+             max-width: 800px;
+             margin: 30px auto;
+             padding: 20px;
+             border: 1px solid #e5e7eb;
+             border-radius: 8px;
+             background-color: #f9fafb;
+             position: relative; /* Für absolute Positionierung von Labels */
+         }
+         /* Styling für Slider */
+         input[type="range"] {
+             width: 80%;
+             margin: 10px auto;
+             display: block;
+         }
+         /* Styling für Abstands-Visualisierung */
+         .distance-lines-median line {
+             stroke: #ef4444; /* Rot */
+             stroke-width: 0.5;
+             stroke-dasharray: 2 2;
+         }
+          .distance-lines-c line {
+             stroke: #f97316; /* Orange */
+             stroke-width: 0.5;
+             stroke-dasharray: 2 2;
+         }
+         /* Tooltip Styling */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            z-index: 10; /* Über anderen Elementen */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+
+    <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">Visualisierung der Minimaleigenschaft des Medians</h1>
+    <p class="text-center text-gray-600 mb-6 max-w-2xl mx-auto">
+        Die Summe der absoluten Abstände $|x_i - c|$ aller Datenpunkte $x_i$ von einem Punkt $c$ ist minimal, wenn $c$ der Median ($\tilde{x}$ oder $x_{med}$) ist. Bewege den orangen Punkt $c$ mit dem Slider und beobachte die Summe der Abstände.
+    </p>
+
+    <div class="formula-container text-gray-700">
+        Minimaleigenschaft: $$ \sum_{i=1}^{n} |x_i - \tilde{x}| \le \sum_{i=1}^{n} |x_i - c| \quad \forall c \in \mathbb{R} $$
+    </div>
+
+    <div class="visualization-container shadow-md">
+        <svg id="numberLineSVG" width="100%" height="180"></svg>
+        <label for="cSlider" class="block text-center text-sm font-medium text-gray-700 mt-2">Position von $c$ wählen:</label>
+        <input type="range" id="cSlider" name="cSlider" class="cursor-pointer">
+        <div id="cValueDisplay" class="text-center text-orange-600 font-bold">Wert von c: <span></span></div>
+    </div>
+
+    <div class="results-container max-w-2xl mx-auto mt-6 p-4 bg-white rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-3 text-gray-700">Daten und Ergebnisse:</h2>
+        <div class="mb-2">
+            <span class="font-medium text-gray-600">Datenpunkte ($x_i$):</span>
+            <span id="dataPointsDisplay" class="ml-2 text-blue-600 font-mono"></span>
+        </div>
+        <div class="mb-2">
+            <span class="font-medium text-gray-600">Median ($\tilde{x}$):</span>
+            <span id="medianDisplay" class="ml-2 text-red-600 font-bold font-mono"></span>
+        </div>
+        <div class="mb-2">
+            <span class="font-medium text-gray-600">Gewählter Punkt ($c$):</span>
+            <span id="cDisplay" class="ml-2 text-orange-600 font-bold font-mono"></span>
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-200">
+            <span class="font-medium text-gray-600">Summe der absoluten Abstände vom Median ($\sum |x_i - \tilde{x}|$):</span>
+            <span id="sumDistMedianDisplay" class="ml-2 text-red-700 font-bold text-lg font-mono"></span>
+        </div>
+         <div class="mt-1">
+            <span class="font-medium text-gray-600">Summe der absoluten Abstände von $c$ ($\sum |x_i - c|$):</span>
+            <span id="sumDistCDisplay" class="ml-2 text-orange-700 font-bold text-lg font-mono"></span>
+        </div>
+        <div id="comparison" class="mt-3 pt-3 border-t border-gray-200 text-center font-semibold"></div>
+    </div>
+
+    <script>
+        // --- Initialisierung ---
+        let dataPoints = [1, 2, 3, 8, 10, 11, 15]; // Beispiel-Datenpunkte (ungerade Anzahl)
+        // let dataPoints = [1, 2, 3, 8, 10, 11, 15, 18]; // Beispiel (gerade Anzahl)
+        const svg = document.getElementById('numberLineSVG');
+        const dataPointsDisplay = document.getElementById('dataPointsDisplay');
+        const medianDisplay = document.getElementById('medianDisplay');
+        const cDisplay = document.getElementById('cDisplay');
+        const sumDistMedianDisplay = document.getElementById('sumDistMedianDisplay');
+        const sumDistCDisplay = document.getElementById('sumDistCDisplay');
+        const cSlider = document.getElementById('cSlider');
+        const cValueDisplaySpan = document.querySelector('#cValueDisplay span');
+        const comparisonDisplay = document.getElementById('comparison');
+        const tooltip = document.createElement('div'); // Tooltip
+        tooltip.className = 'tooltip';
+        document.body.appendChild(tooltip);
+
+        let dataMin, dataMax, dataRange, median, cValue; // Globale Variablen für Skalierung etc.
+
+        // --- Berechnungsfunktionen ---
+        function calculateMedian(data) {
+            if (data.length === 0) return 0;
+            const sortedData = [...data].sort((a, b) => a - b); // Kopie sortieren
+            const midIndex = Math.floor(sortedData.length / 2);
+            if (sortedData.length % 2 === 0) {
+                // Gerade Anzahl: Mittelwert der beiden mittleren Elemente
+                return (sortedData[midIndex - 1] + sortedData[midIndex]) / 2;
+            } else {
+                // Ungerade Anzahl: Mittleres Element
+                return sortedData[midIndex];
+            }
+        }
+
+        function calculateSumAbsoluteDistances(data, point) {
+            if (data.length === 0) return 0;
+            return data.reduce((acc, val) => acc + Math.abs(val - point), 0);
+        }
+
+        // --- Visualisierungsfunktion ---
+        function visualize() {
+            median = calculateMedian(dataPoints);
+            cValue = parseFloat(cSlider.value); // Aktuellen Wert von c holen
+
+            const sumDistMedian = calculateSumAbsoluteDistances(dataPoints, median);
+            const sumDistC = calculateSumAbsoluteDistances(dataPoints, cValue);
+
+            // Ergebnisse anzeigen
+            dataPointsDisplay.textContent = dataPoints.sort((a, b) => a - b).join(', '); // Sortiert anzeigen
+            medianDisplay.textContent = median.toFixed(2);
+            cDisplay.textContent = cValue.toFixed(2);
+            cValueDisplaySpan.textContent = cValue.toFixed(2);
+            sumDistMedianDisplay.textContent = sumDistMedian.toFixed(2);
+            sumDistCDisplay.textContent = sumDistC.toFixed(2);
+
+            // Vergleich anzeigen
+            if (Math.abs(sumDistC - sumDistMedian) < 1e-9) { // Toleranz für Fließkomma-Vergleich
+                 comparisonDisplay.textContent = `Summe Abstände von c = Summe Abstände vom Median`;
+                 comparisonDisplay.className = "mt-3 pt-3 border-t border-gray-200 text-center font-semibold text-gray-700";
+            } else if (sumDistC > sumDistMedian) {
+                comparisonDisplay.textContent = `Summe Abstände von c > Summe Abstände vom Median`;
+                 comparisonDisplay.className = "mt-3 pt-3 border-t border-gray-200 text-center font-semibold text-green-700";
+            } else {
+                 // Sollte theoretisch nicht vorkommen, außer bei numerischer Ungenauigkeit
+                 comparisonDisplay.textContent = `Summe Abstände von c < Summe Abstände vom Median (Ungenauigkeit?)`;
+                 comparisonDisplay.className = "mt-3 pt-3 border-t border-gray-200 text-center font-semibold text-yellow-600";
+            }
+
+
+            // SVG leeren und neu zeichnen
+            svg.innerHTML = ''; // Alte Elemente entfernen
+
+            if (dataPoints.length === 0) return;
+
+            const padding = 40;
+            const svgWidth = svg.clientWidth;
+            const svgHeight = svg.clientHeight;
+
+            // Skalierungsfunktion: Datenwert -> SVG x-Koordinate
+            function scaleX(value) {
+                if (dataRange === 0) return svgWidth / 2;
+                return padding + ((value - dataMin) / dataRange) * (svgWidth - 2 * padding);
+            }
+
+            // 1. Zahlenstrahl zeichnen
+            const axisY = svgHeight / 2; // Y-Position der Achse
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', padding / 2);
+            line.setAttribute('y1', axisY);
+            line.setAttribute('x2', svgWidth - padding / 2);
+            line.setAttribute('y2', axisY);
+            line.setAttribute('stroke', '#9ca3af');
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+
+             // Achsenbeschriftung (Min/Max)
+             const textMin = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             textMin.setAttribute('x', padding / 2);
+             textMin.setAttribute('y', axisY + 15);
+             textMin.setAttribute('font-size', '0.7rem');
+             textMin.setAttribute('fill', '#6b7280');
+             textMin.textContent = dataMin.toFixed(1);
+             svg.appendChild(textMin);
+
+             const textMax = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             textMax.setAttribute('x', svgWidth - padding / 2);
+             textMax.setAttribute('y', axisY + 15);
+             textMax.setAttribute('text-anchor', 'end');
+             textMax.setAttribute('font-size', '0.7rem');
+             textMax.setAttribute('fill', '#6b7280');
+             textMax.textContent = dataMax.toFixed(1);
+             svg.appendChild(textMax);
+
+            // Gruppen für Abstandslinien erstellen (damit sie hinter den Punkten liegen)
+            const distanceGroupMedian = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            distanceGroupMedian.classList.add('distance-lines-median');
+            svg.appendChild(distanceGroupMedian);
+
+            const distanceGroupC = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            distanceGroupC.classList.add('distance-lines-c');
+            svg.appendChild(distanceGroupC);
+
+            // 2. Datenpunkte, Median, c und Abstandslinien zeichnen
+            const medianX = scaleX(median);
+            const cX = scaleX(cValue);
+            const pointY = axisY; // Y-Position der Punkte
+            const medianLineY = axisY + 15; // Y-Position für Median-Abstandslinien
+            const cLineY = axisY + 30; // Y-Position für C-Abstandslinien
+
+            dataPoints.forEach(value => {
+                const pointX = scaleX(value);
+
+                // Datenpunkt
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', pointX);
+                circle.setAttribute('cy', pointY);
+                circle.setAttribute('r', 5);
+                circle.classList.add('data-point');
+                circle.addEventListener('mouseover', (e) => showTooltip(e, `x = ${value}`));
+                circle.addEventListener('mousemove', moveTooltip);
+                circle.addEventListener('mouseout', hideTooltip);
+                svg.appendChild(circle); // Punkte über Linien zeichnen
+
+                // Abstandslinie zum Median
+                const distLineMedian = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                distLineMedian.setAttribute('x1', pointX);
+                distLineMedian.setAttribute('y1', pointY);
+                distLineMedian.setAttribute('x2', medianX);
+                distLineMedian.setAttribute('y2', medianLineY); // Leicht versetzt für Sichtbarkeit
+                distanceGroupMedian.appendChild(distLineMedian);
+
+                // Abstandslinie zu c
+                const distLineC = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                distLineC.setAttribute('x1', pointX);
+                distLineC.setAttribute('y1', pointY);
+                distLineC.setAttribute('x2', cX);
+                distLineC.setAttribute('y2', cLineY); // Weiter versetzt
+                distanceGroupC.appendChild(distLineC);
+            });
+
+            // 3. Median markieren (nach den Linien, damit er oben ist)
+            const medianMarker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            medianMarker.setAttribute('points', `${medianX},${medianLineY-5} ${medianX-5},${medianLineY+5} ${medianX+5},${medianLineY+5}`); // Dreieck
+            medianMarker.classList.add('median-marker');
+             medianMarker.addEventListener('mouseover', (e) => showTooltip(e, `Median = ${median.toFixed(2)}`));
+             medianMarker.addEventListener('mousemove', moveTooltip);
+             medianMarker.addEventListener('mouseout', hideTooltip);
+            svg.appendChild(medianMarker);
+
+            const medianText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            medianText.setAttribute('x', medianX);
+            medianText.setAttribute('y', medianLineY + 18); // Text unter Marker
+            medianText.setAttribute('text-anchor', 'middle');
+            medianText.classList.add('median-text');
+            medianText.textContent = `Median`;
+            svg.appendChild(medianText);
+
+             // 4. Punkt c markieren
+            const cMarker = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            cMarker.setAttribute('points', `${cX},${cLineY-5} ${cX-5},${cLineY+5} ${cX+5},${cLineY+5}`); // Dreieck
+            cMarker.classList.add('c-marker');
+             cMarker.addEventListener('mouseover', (e) => showTooltip(e, `c = ${cValue.toFixed(2)}`));
+             cMarker.addEventListener('mousemove', moveTooltip);
+             cMarker.addEventListener('mouseout', hideTooltip);
+            svg.appendChild(cMarker);
+
+            const cText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            cText.setAttribute('x', cX);
+            cText.setAttribute('y', cLineY + 18); // Text unter Marker
+            cText.setAttribute('text-anchor', 'middle');
+            cText.classList.add('c-text');
+            cText.textContent = `c`;
+            svg.appendChild(cText);
+        }
+
+         // --- Tooltip Funktionen ---
+         function showTooltip(event, text) {
+             tooltip.textContent = text;
+             tooltip.style.opacity = '1';
+             moveTooltip(event); // Sofort positionieren
+         }
+
+         function moveTooltip(event) {
+             tooltip.style.left = `${event.pageX + 10}px`;
+             tooltip.style.top = `${event.pageY + 10}px`;
+         }
+
+         function hideTooltip() {
+             tooltip.style.opacity = '0';
+         }
+
+        // --- Initialisierung des Sliders und der Skala ---
+        function initializeScaleAndSlider() {
+            if (dataPoints.length === 0) {
+                 dataMin = 0;
+                 dataMax = 10;
+            } else {
+                 median = calculateMedian(dataPoints); // Median neu berechnen
+                 // Min/Max für Skala und Slider bestimmen (mit Puffer)
+                 dataMin = Math.min(...dataPoints) - 2;
+                 dataMax = Math.max(...dataPoints) + 2;
+            }
+             dataRange = dataMax - dataMin === 0 ? 1 : dataMax - dataMin;
+
+            // Slider konfigurieren
+            cSlider.min = dataMin;
+            cSlider.max = dataMax;
+            cSlider.step = (dataRange / 100); // Schrittweite für flüssigere Bewegung
+            cSlider.value = median; // Startwert für c ist der Median
+        }
+
+        // --- Event Listener ---
+        cSlider.addEventListener('input', visualize); // Neu zeichnen bei Slider-Bewegung
+
+        // --- Initialer Aufruf ---
+        initializeScaleAndSlider();
+        visualize();
+
+        // Neu initialisieren und zeichnen, wenn Fenstergröße geändert wird
+        window.addEventListener('resize', () => {
+             initializeScaleAndSlider(); // Skala neu berechnen
+             visualize();
+        });
+
+    </script>
+
+</body>
+</html>
