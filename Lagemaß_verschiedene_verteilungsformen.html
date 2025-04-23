@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vergleich von Modus, Median & Mittelwert</title>
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            width: 90%;
+            max-width: 650px;
+            margin: 30px auto;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        .explanation {
+            margin-bottom: 15px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        .results {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.95em;
+            display: flex; /* Use flexbox for alignment */
+            justify-content: space-around; /* Distribute space */
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 10px; /* Space between items */
+        }
+        .results span {
+            font-weight: 600;
+        }
+        .modus { color: #10b981; } /* Grün */
+        .median { color: #ef4444; } /* Rot */
+        .mittelwert { color: #3b82f6; } /* Blau */
+
+        /* Styling für die Hervorhebung der Beziehung */
+        .relationship {
+            font-weight: bold;
+            text-align: center;
+            margin-top: 5px;
+            color: #1f2937;
+        }
+         /* Zentrierung für Formel */
+         .formula-container {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.1em;
+         }
+         h1, h2 {
+            text-align: center;
+            color: #111827;
+         }
+         h1 { margin-bottom: 1rem; }
+         h2 { margin-bottom: 0.8rem; }
+    </style>
+</head>
+<body class="bg-gray-100 p-6">
+
+    <h1 class="text-3xl font-bold">Lage von Modus, Median & Mittelwert</h1>
+    <p class="text-center text-gray-600 mb-8 max-w-3xl mx-auto">
+        Die relative Position von Modus ($x_{mod}$), Median ($x_{med}$) und Arithmetischem Mittel ($\bar{x}$) zueinander hängt von der Form (Schiefe) der Datenverteilung ab. Hier sehen Sie Beispiele für unimodale (eingipflige) Verteilungen.
+    </p>
+
+    <div class="chart-container">
+        <h2 class="text-xl font-semibold">1. Symmetrische Verteilung</h2>
+        <p class="explanation">
+            Bei einer symmetrischen Verteilung sind die Daten annähernd spiegelbildlich um das Zentrum verteilt. Der Gipfel (Modus), der mittlere Wert (Median) und der Schwerpunkt (Mittelwert) fallen hier typischerweise zusammen oder liegen sehr nah beieinander.
+        </p>
+        <canvas id="chartSymmetric"></canvas>
+        <div class="results">
+            <div>Modus: <span id="modusSymmetric" class="modus"></span></div>
+            <div>Median: <span id="medianSymmetric" class="median"></span></div>
+            <div>Mittelwert: <span id="meanSymmetric" class="mittelwert"></span></div>
+        </div>
+         <div class="relationship">Typische Beziehung: $x_{mod} \approx x_{med} \approx \bar{x}$</div>
+    </div>
+
+    <div class="chart-container">
+        <h2 class="text-xl font-semibold">2. Rechtsschiefe (Linkssteile) Verteilung</h2>
+        <p class="explanation">
+            Eine rechtsschiefe Verteilung hat einen "langen Schwanz" nach rechts, d.h., es gibt einige hohe Ausreißerwerte. Der häufigste Wert (Modus) liegt am Gipfel links. Der Median liegt rechts vom Modus. Das arithmetische Mittel wird durch die hohen Werte am stärksten nach rechts "gezogen".
+        </p>
+        <canvas id="chartRightSkewed"></canvas>
+        <div class="results">
+            <div>Modus: <span id="modusRightSkewed" class="modus"></span></div>
+            <div>Median: <span id="medianRightSkewed" class="median"></span></div>
+            <div>Mittelwert: <span id="meanRightSkewed" class="mittelwert"></span></div>
+        </div>
+         <div class="relationship">Typische Beziehung: $x_{mod} \le x_{med} \le \bar{x}$</div>
+    </div>
+
+    <div class="chart-container">
+        <h2 class="text-xl font-semibold">3. Linksschiefe (Rechtssteile) Verteilung</h2>
+        <p class="explanation">
+            Eine linksschiefe Verteilung hat einen "langen Schwanz" nach links, d.h., es gibt einige niedrige Ausreißerwerte. Der häufigste Wert (Modus) liegt am Gipfel rechts. Der Median liegt links vom Modus. Das arithmetische Mittel wird durch die niedrigen Werte am stärksten nach links "gezogen".
+        </p>
+        <canvas id="chartLeftSkewed"></canvas>
+        <div class="results">
+            <div>Modus: <span id="modusLeftSkewed" class="modus"></span></div>
+            <div>Median: <span id="medianLeftSkewed" class="median"></span></div>
+            <div>Mittelwert: <span id="meanLeftSkewed" class="mittelwert"></span></div>
+        </div>
+        <div class="relationship">Typische Beziehung: $\bar{x} \le x_{med} \le x_{mod}$</div>
+    </div>
+
+    <script>
+        // --- Hilfsfunktionen ---
+
+        // Berechnet Modus, Median, Mittelwert
+        function calculateMeasures(data) {
+            if (data.length === 0) return { mean: NaN, median: NaN, mode: NaN };
+
+            // Mittelwert
+            const sum = data.reduce((acc, val) => acc + val, 0);
+            const mean = sum / data.length;
+
+            // Median
+            const sortedData = [...data].sort((a, b) => a - b);
+            const midIndex = Math.floor(sortedData.length / 2);
+            let median;
+            if (sortedData.length % 2 === 0) {
+                median = (sortedData[midIndex - 1] + sortedData[midIndex]) / 2;
+            } else {
+                median = sortedData[midIndex];
+            }
+
+            // Modus (vereinfacht: erster gefundener häufigster Wert)
+            const frequency = {};
+            let maxFreq = 0;
+            let mode = NaN;
+            data.forEach(val => {
+                frequency[val] = (frequency[val] || 0) + 1;
+                if (frequency[val] > maxFreq) {
+                    maxFreq = frequency[val];
+                    mode = val;
+                }
+            });
+             // Fall: Alle Werte gleich häufig -> kein eindeutiger Modus (oder alle sind Modi)
+             const allFreqs = Object.values(frequency);
+             if (new Set(allFreqs).size === 1 && allFreqs.length > 1) {
+                 mode = NaN; // Kein eindeutiger Modus
+             }
+
+
+            return { mean: mean, median: median, mode: mode };
+        }
+
+        // Erstellt Frequenzdaten für Chart.js Histogramm
+        function createFrequencyData(data) {
+            const frequency = {};
+            data.forEach(val => {
+                frequency[val] = (frequency[val] || 0) + 1;
+            });
+            // Sortiere nach Schlüssel (Wert) für korrekte Reihenfolge im Chart
+            const sortedKeys = Object.keys(frequency).map(Number).sort((a, b) => a - b);
+            const labels = sortedKeys.map(String);
+            const frequencies = sortedKeys.map(key => frequency[key]);
+            return { labels, frequencies };
+        }
+
+        // Erstellt ein Chart.js Histogramm
+        function createHistogram(canvasId, data, measures) {
+            const { labels, frequencies } = createFrequencyData(data);
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            // Finde Indizes für Markierungen (optional, falls man Linien zeichnen wollte)
+            // const modeIndex = labels.indexOf(String(measures.mode));
+            // const medianApproxIndex = labels.findIndex(label => Number(label) >= measures.median); // Ungefähr
+            // const meanApproxIndex = labels.findIndex(label => Number(label) >= measures.mean); // Ungefähr
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Häufigkeit',
+                        data: frequencies,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)', // Türkis
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        barPercentage: 1.0, // Balken berühren sich (Histogramm-Look)
+                        categoryPercentage: 1.0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Wert' },
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Häufigkeit' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                        // Hier könnte man Annotationen für Modus/Median/Mittel hinzufügen
+                        // annotation: {
+                        //     annotations: {
+                        //         // Beispiel für Median-Linie (erfordert chartjs-plugin-annotation)
+                        //         lineMedian: {
+                        //             type: 'line',
+                        //             scaleID: 'x',
+                        //             value: measures.median, // Exakter Wert
+                        //             borderColor: 'red',
+                        //             borderWidth: 2,
+                        //             label: { content: 'Median', enabled: true, position: 'top' }
+                        //         }
+                        //     }
+                        // }
+                    }
+                }
+            });
+
+             // Zeige berechnete Werte unter dem Chart an
+             document.getElementById(`modus${canvasId.replace('chart', '')}`).textContent = measures.mode !== undefined && !isNaN(measures.mode) ? measures.mode.toFixed(2) : 'N/A';
+             document.getElementById(`median${canvasId.replace('chart', '')}`).textContent = measures.median.toFixed(2);
+             document.getElementById(`mean${canvasId.replace('chart', '')}`).textContent = measures.mean.toFixed(2);
+        }
+
+        // --- Daten für die Beispiele ---
+        const dataSymmetric = [3, 4, 4, 5, 5, 5, 5, 6, 6, 7]; // Symmetrisch
+        const dataRightSkewed = [1, 1, 1, 1, 2, 2, 3, 4, 5, 10]; // Rechtsschief
+        const dataLeftSkewed = [1, 6, 7, 8, 8, 9, 9, 9, 9, 10]; // Linksschief
+
+        // --- Berechnungen durchführen ---
+        const measuresSymmetric = calculateMeasures(dataSymmetric);
+        const measuresRightSkewed = calculateMeasures(dataRightSkewed);
+        const measuresLeftSkewed = calculateMeasures(dataLeftSkewed);
+
+        // --- Charts erstellen ---
+        createHistogram('chartSymmetric', dataSymmetric, measuresSymmetric);
+        createHistogram('chartRightSkewed', dataRightSkewed, measuresRightSkewed);
+        createHistogram('chartLeftSkewed', dataLeftSkewed, measuresLeftSkewed);
+
+    </script>
+
+</body>
+</html>
