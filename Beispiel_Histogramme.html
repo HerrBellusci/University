@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histogramm Beispiele</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling für bessere Lesbarkeit */
+        body {
+            font-family: 'Inter', sans-serif; /* Standard-Schriftart */
+        }
+        .chart-container {
+            /* Responsive Breite mit maximaler Breite */
+            width: 90%;
+            max-width: 700px;
+            margin: 40px auto; /* Zentrierung und Abstand */
+            padding: 20px;
+            border: 1px solid #e2e8f0; /* Heller Rand */
+            border-radius: 8px; /* Abgerundete Ecken */
+            background-color: #ffffff; /* Weißer Hintergrund */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Leichter Schatten */
+        }
+        h2, h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #1a202c; /* Dunkle Textfarbe */
+        }
+        p {
+            text-align: center;
+            margin-top: 10px;
+            font-style: italic;
+            color: #4a5568; /* Graue Textfarbe */
+            font-size: 0.9em;
+        }
+        /* Sicherstellen, dass Canvas responsive ist */
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <h2 class="text-2xl font-bold mt-8">Beispiele für Histogramm-Darstellungen</h2>
+
+    <div class="chart-container">
+        <h3 class="text-xl font-semibold">1. Histogramm mit gleichen Klassenbreiten</h3>
+        <canvas id="histogramEqualWidth"></canvas>
+        <p>Höhe ist proportional zur relativen Häufigkeit (da alle Klassenbreiten = 10 sind).</p>
+    </div>
+
+    <div class="chart-container">
+        <h3 class="text-xl font-semibold">2. Histogramm mit ungleichen Klassenbreiten (korrekte Darstellung)</h3>
+        <canvas id="histogramUnequalWidthCorrect"></canvas>
+        <p>Höhe = Häufigkeitsdichte ($f_k / b_k$). Fläche ist proportional zur relativen Häufigkeit.</p>
+        <p class="font-bold text-red-600">Achtung: Die Balkenbreiten sind hier visuell gleich, repräsentieren aber unterschiedlich breite Klassen (15, 5, 20)! Die Fläche zählt.</p>
+     </div>
+
+    <div class="chart-container">
+        <h3 class="text-xl font-semibold">3. Säulendiagramm mit ungleichen Klassenbreiten (irreführende Darstellung)</h3>
+        <canvas id="histogramUnequalWidthWrong"></canvas>
+        <p>Höhe ist (fälschlicherweise) proportional zur relativen Häufigkeit. Breitere Klassen wirken überrepräsentiert.</p>
+    </div>
+
+    <script>
+        // --- Beispieldaten ---
+        // Beispiel 1: Gleiche Klassenbreiten
+        const labelsEqual = ['130-140', '140-150', '150-160', '160-170']; // Klassenbezeichnungen
+        const freqRelEqual = [0.14, 0.43, 0.29, 0.14]; // Relative Häufigkeiten f_k
+        const classWidthEqual = 10; // Konstante Klassenbreite b
+        // Da Breite konstant ist, ist die Höhe H_k proportional zu f_k
+
+        // Beispiel 2 & 3: Ungleiche Klassenbreiten
+        const labelsUnequal = ['130-145', '145-150', '150-170']; // Klassenbezeichnungen
+        const classWidthsUnequal = [15, 5, 20]; // Klassenbreiten b_k
+        const freqRelUnequal = [0.23, 0.34, 0.43]; // Relative Häufigkeiten f_k
+
+        // Berechnung der Häufigkeitsdichte für Beispiel 2 (H_k = f_k / b_k)
+        const densityUnequal = freqRelUnequal.map((freq, index) => {
+            // Rundung auf sinnvolle Nachkommastellen
+             return parseFloat((freq / classWidthsUnequal[index]).toFixed(4));
+        });
+
+        // --- Basis-Konfiguration für die Charts ---
+        const configBase = {
+            type: 'bar', // Balkendiagramm
+            options: {
+                responsive: true, // Diagramm passt sich der Containergröße an
+                maintainAspectRatio: true, // Seitenverhältnis beibehalten
+                scales: {
+                    x: {
+                        grid: { display: false }, // Kein Gitter auf der x-Achse
+                        ticks: {
+                             autoSkip: false, // Alle Labels anzeigen
+                             maxRotation: 0, // Labels horizontal
+                             minRotation: 0
+                        }
+                    },
+                    y: {
+                        beginAtZero: true, // y-Achse beginnt bei 0
+                        title: { // Titel für die y-Achse
+                             display: true,
+                             font: { size: 14 }
+                        },
+                        grid: { color: '#e2e8f0' } // Helles Gitter auf der y-Achse
+                    }
+                },
+                plugins: {
+                    legend: { display: false }, // Keine Legende anzeigen
+                    tooltip: { // Tooltips für Interaktivität
+                         enabled: true,
+                         backgroundColor: 'rgba(0, 0, 0, 0.7)', // Dunkler Tooltip-Hintergrund
+                         titleFont: { size: 14 },
+                         bodyFont: { size: 12 }
+                    }
+                },
+                // Wichtig für Histogramm-Optik: Balken berühren sich
+                barPercentage: 1.0,
+                categoryPercentage: 1.0,
+                animation: { // Leichte Animation beim Laden
+                    duration: 800,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        };
+
+        // --- Chart-Instanzen erstellen ---
+
+        // Chart 1: Gleiche Breiten
+        const ctxEqual = document.getElementById('histogramEqualWidth').getContext('2d');
+        new Chart(ctxEqual, {
+            ...configBase, // Übernimmt Basis-Konfiguration
+            data: {
+                labels: labelsEqual,
+                datasets: [{
+                    label: 'Relative Häufigkeit', // Wird im Tooltip angezeigt
+                    data: freqRelEqual, // Daten für die Balkenhöhen
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)', // Blauton mit Transparenz
+                    borderColor: 'rgba(59, 130, 246, 1)', // Randfarbe
+                    borderWidth: 1 // Randbreite
+                }]
+            },
+            options: { // Spezifische Optionen für diesen Chart
+                 ...configBase.options,
+                 scales: {
+                     ...configBase.options.scales,
+                     y: {
+                         ...configBase.options.scales.y,
+                         title: { // Y-Achsen-Titel setzen
+                             ...configBase.options.scales.y.title,
+                             text: 'Relative Häufigkeit (f_k)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Chart 2: Ungleiche Breiten (korrekt mit Dichte)
+        const ctxUnequalCorrect = document.getElementById('histogramUnequalWidthCorrect').getContext('2d');
+        new Chart(ctxUnequalCorrect, {
+             ...configBase,
+             data: {
+                 // Klassenbreite im Label anzeigen für Klarheit
+                 labels: labelsUnequal.map((label, i) => `${label} (Breite ${classWidthsUnequal[i]})`),
+                 datasets: [{
+                     label: 'Häufigkeitsdichte',
+                     data: densityUnequal, // Daten sind die berechneten Dichten
+                     backgroundColor: 'rgba(16, 185, 129, 0.6)', // Grünton mit Transparenz
+                     borderColor: 'rgba(16, 185, 129, 1)',
+                     borderWidth: 1
+                }]
+            },
+             options: {
+                 ...configBase.options,
+                 scales: {
+                     ...configBase.options.scales,
+                     y: {
+                         ...configBase.options.scales.y,
+                         title: {
+                             ...configBase.options.scales.y.title,
+                             text: 'Häufigkeitsdichte (f_k / b_k)' // Korrekter Y-Achsen-Titel
+                        }
+                    }
+                }
+            }
+        });
+
+        // Chart 3: Ungleiche Breiten (falsch als Säulendiagramm)
+        const ctxUnequalWrong = document.getElementById('histogramUnequalWidthWrong').getContext('2d');
+        new Chart(ctxUnequalWrong, {
+             ...configBase,
+             data: {
+                 labels: labelsUnequal.map((label, i) => `${label} (Breite ${classWidthsUnequal[i]})`),
+                 datasets: [{
+                     label: 'Relative Häufigkeit',
+                     data: freqRelUnequal, // Hier wird f_k direkt als Höhe genommen (falsch!)
+                     backgroundColor: 'rgba(239, 68, 68, 0.6)', // Rotton mit Transparenz
+                     borderColor: 'rgba(239, 68, 68, 1)',
+                     borderWidth: 1
+                }]
+            },
+             options: {
+                 ...configBase.options,
+                 scales: {
+                     ...configBase.options.scales,
+                     y: {
+                         ...configBase.options.scales.y,
+                         title: {
+                             ...configBase.options.scales.y.title,
+                             text: 'Relative Häufigkeit (f_k) - Irreführend!' // Y-Achsen-Titel mit Warnung
+                        }
+                    }
+                }
+            }
+        });
+
+    </script>
+
+</body>
+</html>
+```
+
+**Was der Code macht:**
+
+1.  **HTML:** Definiert die Struktur der Seite mit drei Bereichen für die Diagramme (`<canvas>`).
+2.  **CSS (Tailwind + Style-Block):** Sorgt für ein ansprechendes, responsives Layout mit abgerundeten Ecken, Schatten und guter Lesbarkeit.
+3.  **JavaScript:**
+    * Lädt die Chart.js-Bibliothek.
+    * Definiert Beispieldaten (`labels...`, `freqRel...`, `classWidths...`).
+    * Berechnet die Häufigkeitsdichte für das korrekte Histogramm mit ungleichen Breiten.
+    * Erstellt eine Basis-Konfiguration (`configBase`) für alle Diagramme (Balkendiagramm, Achsen, Tooltips, aneinandergrenzende Balken).
+    * Erzeugt drei Chart-Instanzen:
+        * `histogramEqualWidth`: Zeigt relative Häufigkeiten als Höhe (korrekt bei gleicher Breite).
+        * `histogramUnequalWidthCorrect`: Zeigt Häufigkeitsdichte als Höhe (korrekt bei ungleicher Breite). Die tatsächlichen Breiten werden zur Verdeutlichung in die Labels geschrieben.
+        * `histogramUnequalWidthWrong`: Zeigt relative Häufigkeiten als Höhe (falsch/irreführend bei ungleicher Breite).
+    * Die Y-Achsen sind entsprechend beschriftet, um den Unterschied (Relative Häufigkeit vs. Häufigkeitsdichte) klarzumachen.
+
+Du kannst diesen HTML-Code direkt in einer Datei speichern (z.B. `histogramme.html`) und im Browser öffnen, um die interaktiven Diagramme zu seh
