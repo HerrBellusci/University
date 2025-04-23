@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histogramm: Gleiche vs. Ungleiche Klassenbreiten</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling für bessere Lesbarkeit */
+        body {
+            font-family: 'Inter', sans-serif; /* Standard-Schriftart */
+        }
+        .chart-container {
+            /* Responsive Breite mit maximaler Breite */
+            width: 90%;
+            max-width: 700px;
+            margin: 40px auto; /* Zentrierung und Abstand */
+            padding: 25px;
+            border: 1px solid #e2e8f0; /* Heller Rand */
+            border-radius: 12px; /* Stärkere Abrundung */
+            background-color: #ffffff; /* Weißer Hintergrund */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); /* Deutlicherer Schatten */
+        }
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1a202c; /* Dunkle Textfarbe */
+        }
+        p.description {
+            text-align: left; /* Linksbündig für bessere Lesbarkeit */
+            margin-top: 15px;
+            margin-bottom: 25px;
+            color: #4a5568; /* Graue Textfarbe */
+            font-size: 1em;
+            line-height: 1.6;
+        }
+         p.info {
+            text-align: center;
+            margin-top: 5px;
+            font-style: italic;
+            color: #718096; /* Helleres Grau */
+            font-size: 0.9em;
+        }
+         p.warning {
+            text-align: center;
+             margin-top: 10px;
+             font-weight: bold;
+             color: #c53030; /* Rote Warnfarbe */
+             font-size: 0.9em;
+         }
+        /* Sicherstellen, dass Canvas responsive ist */
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <h1 class="text-3xl font-bold mt-10">Histogramm-Darstellung</h1>
+    <p class="description max-w-3xl mx-auto text-center">
+        Visualisierung der beiden Fälle bei der Histogramm-Erstellung: gleiche und ungleiche Klassenbreiten.
+    </p>
+
+    <div class="chart-container">
+        <h2 class="text-xl font-semibold">Fall 1: Gleiche Klassenbreiten</h2>
+         <p class="description">
+            Wenn alle Klassen die gleiche Breite $b$ haben, ist die Höhe $H_k$ des Balkens direkt proportional zur relativen Häufigkeit $f_k$ (da $H_k = f_k / b$). Die Y-Achse kann daher direkt die relativen Häufigkeiten anzeigen. Die Fläche $A_k = b \cdot H_k = b \cdot (f_k / b) = f_k$ ist ebenfalls proportional (hier sogar gleich) zur relativen Häufigkeit.
+        </p>
+        <canvas id="histogramEqualWidth"></canvas>
+        <p class="info">Beispieldaten mit konstanter Klassenbreite = 10.</p>
+    </div>
+
+    <div class="chart-container">
+        <h2 class="text-xl font-semibold">Fall 2: Ungleiche Klassenbreiten (Korrekte Darstellung)</h2>
+         <p class="description">
+            Haben die Klassen unterschiedliche Breiten $b_k$, muss die Höhe des Balkens als Häufigkeitsdichte $H_k = f_k / b_k$ berechnet werden. Nur so ist sichergestellt, dass der Flächeninhalt $A_k = b_k \cdot H_k = b_k \cdot (f_k / b_k) = f_k$ proportional (hier gleich) zur relativen Häufigkeit $f_k$ ist. Das Auge nimmt Flächen wahr, daher ist dies die korrekte Darstellung.
+        </p>
+        <canvas id="histogramUnequalWidthCorrect"></canvas>
+        <p class="info">Y-Achse zeigt Häufigkeitsdichte. Beachte die unterschiedlichen Klassenbreiten (15, 5, 20) in den Labels.</p>
+         <p class="warning">Obwohl die Balken visuell gleich breit sind, repräsentieren sie unterschiedlich breite Klassen!</p>
+     </div>
+
+    <div class="chart-container">
+        <h2 class="text-xl font-semibold">Fall 2: Ungleiche Klassenbreiten (Irreführende Darstellung)</h2>
+         <p class="description">
+            Würde man bei ungleichen Klassenbreiten $b_k$ die Höhe $H_k$ einfach proportional zur relativen Häufigkeit $f_k$ setzen (wie bei einem Säulendiagramm), wäre der Flächeninhalt $A_k = b_k \cdot H_k \propto b_k \cdot f_k$. Dies ist NICHT proportional zur relativen Häufigkeit $f_k$. Breitere Klassen ($b_k$ groß) würden dadurch optisch überrepräsentiert, was zu Fehlinterpretationen führt.
+        </p>
+        <canvas id="histogramUnequalWidthWrong"></canvas>
+        <p class="info">Y-Achse zeigt (fälschlicherweise) relative Häufigkeit als Höhe.</p>
+        <p class="warning">Vergleiche diesen Chart mit dem korrekten darüber: Die Klasse '150-170' (Breite 20) wirkt hier viel dominanter als in der korrekten Darstellung, obwohl ihre relative Häufigkeit nur 0.43 beträgt.</p>
+    </div>
+
+    <script>
+        // --- Beispieldaten ---
+        // Fall 1: Gleiche Klassenbreiten
+        const labelsEqual = ['130-140', '140-150', '150-160', '160-170']; // Klassenbezeichnungen
+        const freqRelEqual = [0.14, 0.43, 0.29, 0.14]; // Relative Häufigkeiten f_k
+        const classWidthEqual = 10; // Konstante Klassenbreite b
+
+        // Fall 2: Ungleiche Klassenbreiten
+        const labelsUnequal = ['130-145', '145-150', '150-170']; // Klassenbezeichnungen
+        const classWidthsUnequal = [15, 5, 20]; // Klassenbreiten b_k
+        const freqRelUnequal = [0.23, 0.34, 0.43]; // Relative Häufigkeiten f_k
+
+        // Berechnung der Häufigkeitsdichte für Fall 2 (korrekt) (H_k = f_k / b_k)
+        const densityUnequal = freqRelUnequal.map((freq, index) => {
+            // Rundung auf sinnvolle Nachkommastellen
+             return parseFloat((freq / classWidthsUnequal[index]).toFixed(4));
+        });
+
+        // --- Basis-Konfiguration für die Charts ---
+        const configBase = {
+            type: 'bar', // Balkendiagramm
+            options: {
+                responsive: true, // Diagramm passt sich der Containergröße an
+                maintainAspectRatio: true, // Seitenverhältnis beibehalten
+                scales: {
+                    x: {
+                        grid: { display: false }, // Kein Gitter auf der x-Achse
+                        ticks: {
+                             autoSkip: false, // Alle Labels anzeigen
+                             maxRotation: 0, // Labels horizontal
+                             minRotation: 0,
+                             font: { size: 11 } // Kleinere Schrift für Labels
+                        },
+                         title: { // Titel für die x-Achse
+                             display: true,
+                             text: 'Klassen',
+                             font: { size: 14, weight: 'bold' },
+                             padding: { top: 10 }
+                         }
+                    },
+                    y: {
+                        beginAtZero: true, // y-Achse beginnt bei 0
+                        title: { // Titel für die y-Achse
+                             display: true,
+                             font: { size: 14, weight: 'bold' },
+                             padding: { bottom: 10 }
+                        },
+                        grid: { color: '#e2e8f0' } // Helles Gitter auf der y-Achse
+                    }
+                },
+                plugins: {
+                    legend: { display: false }, // Keine Legende anzeigen
+                    tooltip: { // Tooltips für Interaktivität
+                         enabled: true,
+                         backgroundColor: 'rgba(0, 0, 0, 0.7)', // Dunkler Tooltip-Hintergrund
+                         titleFont: { size: 14 },
+                         bodyFont: { size: 12 },
+                         callbacks: {
+                             label: function(context) {
+                                 let label = context.dataset.label || '';
+                                 if (label) { label += ': '; }
+                                 if (context.parsed.y !== null) {
+                                     // Zeige Wert mit 4 Nachkommastellen im Tooltip
+                                     label += context.parsed.y.toFixed(4);
+                                 }
+                                 return label;
+                             }
+                         }
+                    }
+                },
+                // Wichtig für Histogramm-Optik: Balken berühren sich
+                barPercentage: 1.0,
+                categoryPercentage: 1.0,
+                animation: { // Leichte Animation beim Laden
+                    duration: 800,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        };
+
+        // --- Chart-Instanzen erstellen ---
+
+        // Chart 1: Gleiche Breiten (Fall 1)
+        const ctxEqual = document.getElementById('histogramEqualWidth').getContext('2d');
+        new Chart(ctxEqual, {
+            ...configBase, // Übernimmt Basis-Konfiguration
+            data: {
+                labels: labelsEqual,
+                datasets: [{
+                    label: 'Relative Häufigkeit (f_k)', // Wird im Tooltip angezeigt
+                    data: freqRelEqual, // Daten für die Balkenhöhen
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)', // Blauton mit Transparenz
+                    borderColor: 'rgba(59, 130, 246, 1)', // Randfarbe
+                    borderWidth: 1 // Randbreite
+                }]
+            },
+            options: { // Spezifische Optionen für diesen Chart
+                 ...configBase.options,
+                 scales: {
+                     ...configBase.options.scales,
+                     x: { // X-Achsen Titel
+                         ...configBase.options.scales.x,
+                         title: {
+                             ...configBase.options.scales.x.title,
+                             text: 'Klassen (Breite = 10)'
+                         }
+                     },
+                     y: {
+                         ...configBase.options.scales.y,
+                         title: { // Y-Achsen-Titel setzen
+                             ...configBase.options.scales.y.title,
+                             text: 'Relative Häufigkeit (f_k)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Chart 2: Ungleiche Breiten (Fall 2, korrekt mit Dichte)
+        const ctxUnequalCorrect = document.getElementById('histogramUnequalWidthCorrect').getContext('2d');
+        new Chart(ctxUnequalCorrect, {
+             ...configBase,
+             data: {
+                 // Klassenbreite im Label anzeigen für Klarheit
+                 labels: labelsUnequal.map((label, i) => `${label} (b_k=${classWidthsUnequal[i]})`),
+                 datasets: [{
+                     label: 'Häufigkeitsdichte (f_k/b_k)',
+                     data: densityUnequal, // Daten sind die berechneten Dichten
+                     backgroundColor: 'rgba(16, 185, 129, 0.6)', // Grünton mit Transparenz
+                     borderColor: 'rgba(16, 185, 129, 1)',
+                     borderWidth: 1
+                }]
+            },
+             options: {
+                 ...configBase.options,
+                 scales: {
+                     ...configBase.options.scales,
+                      x: { // X-Achsen Titel
+                         ...configBase.options.scales.x,
+                         title: {
+                             ...configBase.options.scales.x.title,
+                             text: 'Klassen (Ungleiche Breiten)'
+                         }
+                     },
+                     y: {
+                         ...configBase.options.scales.y,
+                         title: {
+                             ...configBase.options.scales.y.title,
+                             text: 'Häufigkeitsdichte (f_k / b_k)' // Korrekter Y-Achsen-Titel
+                        }
+                    }
+                }
+            }
+        });
+
+        // Chart 3: Ungleiche Breiten (Fall 2, falsch als Säulendiagramm)
+        const ctxUnequalWrong = document.getElementById('histogramUnequalWidthWrong').getContext('2d');
+        new Chart(ctxUnequalWrong, {
+             ...configBase,
+             data: {
+                 labels: labelsUnequal.map((label, i) => `${label} (b_k=${classWidthsUnequal[i]})`),
+                 datasets: [{
+                     label: 'Relative Häufigkeit (f_k)',
+                     data: freqRelUnequal, // Hier wird f_k direkt als Höhe genommen (falsch!)
+                     backgroundColor: 'rgba(239, 68, 68, 0.6)', // Rotton mit Transparenz
+                     borderColor: 'rgba(239, 68, 68, 1)',
+                     borderWidth: 1
+                }]
+            },
+             options: {
+                 ...configBase.options,
+                 scales: {
+                     ...configBase.options.scales,
+                      x: { // X-Achsen Titel
+                         ...configBase.options.scales.x,
+                         title: {
+                             ...configBase.options.scales.x.title,
+                             text: 'Klassen (Ungleiche Breiten)'
+                         }
+                     },
+                     y: {
+                         ...configBase.options.scales.y,
+                         title: {
+                             ...configBase.options.scales.y.title,
+                             text: 'Relative Häufigkeit (f_k) - Irreführend!' // Y-Achsen-Titel mit Warnung
+                        }
+                    }
+                }
+            }
+        });
+
+    </script>
+
+</body>
+</html>
