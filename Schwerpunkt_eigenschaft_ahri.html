@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schwerpunkteigenschaft des Arithmetischen Mittels</title>
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Styling für SVG-Elemente */
+        .data-point { fill: #3b82f6; /* Blau */ }
+        .mean-line { stroke: #ef4444; /* Rot */ stroke-width: 2; stroke-dasharray: 4 2; }
+        .mean-text { fill: #ef4444; font-size: 0.8rem; font-weight: bold; }
+        .deviation-line { stroke: #6b7280; /* Grau */ stroke-width: 1; }
+        .deviation-positive { stroke: #10b981; /* Grün */ }
+        .deviation-negative { stroke: #f59e0b; /* Orange */ }
+        .deviation-label { font-size: 0.7rem; fill: #4b5563; }
+        /* Styling für Eingabefeld */
+        input[type="number"] {
+             width: 60px;
+             padding: 5px;
+             border: 1px solid #d1d5db;
+             border-radius: 4px;
+             text-align: center;
+             margin-right: 5px;
+        }
+         /* Zentrierung für Formel */
+         .formula-container {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.1em;
+         }
+         /* Container für Visualisierung */
+         .visualization-container {
+             width: 95%;
+             max-width: 800px;
+             margin: 30px auto;
+             padding: 20px;
+             border: 1px solid #e5e7eb;
+             border-radius: 8px;
+             background-color: #f9fafb;
+         }
+         /* Tooltip Styling (optional) */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            pointer-events: none; /* Wichtig, damit Mausereignisse durchgehen */
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6">
+
+    <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">Visualisierung der Schwerpunkteigenschaft</h1>
+    <p class="text-center text-gray-600 mb-6 max-w-2xl mx-auto">
+        Das arithmetische Mittel $\bar{x}$ ist der "Schwerpunkt" der Daten. Das bedeutet, die Summe der Abweichungen aller Datenpunkte $x_i$ vom Mittelwert ist immer Null.
+    </p>
+
+    <div class="formula-container text-gray-700">
+        Schwerpunkteigenschaft: $$ \sum_{i=1}^{n} (x_i - \bar{x}) = 0 $$
+    </div>
+
+    <div class="visualization-container shadow-md">
+        <svg id="numberLineSVG" width="100%" height="150"></svg>
+    </div>
+
+    <div class="results-container max-w-2xl mx-auto mt-6 p-4 bg-white rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-3 text-gray-700">Daten und Ergebnisse:</h2>
+        <div class="mb-2">
+            <span class="font-medium text-gray-600">Datenpunkte ($x_i$):</span>
+            <span id="dataPointsDisplay" class="ml-2 text-blue-600 font-mono"></span>
+        </div>
+        <div class="mb-2">
+            <span class="font-medium text-gray-600">Arithmetisches Mittel ($\bar{x}$):</span>
+            <span id="meanDisplay" class="ml-2 text-red-600 font-bold font-mono"></span>
+        </div>
+        <div class="mb-2">
+            <span class="font-medium text-gray-600">Abweichungen ($x_i - \bar{x}$):</span>
+            <span id="deviationsDisplay" class="ml-2 text-gray-700 font-mono text-sm"></span>
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-200">
+            <span class="font-medium text-gray-600">Summe der Abweichungen ($\sum (x_i - \bar{x})$):</span>
+            <span id="sumDeviationsDisplay" class="ml-2 text-green-700 font-bold text-lg font-mono"></span>
+        </div>
+    </div>
+
+     <div class="input-container max-w-2xl mx-auto mt-6 p-4 bg-white rounded-lg shadow">
+         <h2 class="text-lg font-semibold mb-3 text-gray-700">Datenpunkte ändern:</h2>
+         <div id="dataInputs" class="flex flex-wrap gap-2 items-center">
+             </div>
+         <button id="addPointBtn" class="mt-3 mr-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">Punkt hinzufügen</button>
+         <button id="removePointBtn" class="mt-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm">Letzten Punkt entfernen</button>
+     </div>
+
+
+    <script>
+        // --- Initialisierung ---
+        let dataPoints = [2, 3, 4, 9, 12]; // Beispiel-Datenpunkte
+        const svg = document.getElementById('numberLineSVG');
+        const dataPointsDisplay = document.getElementById('dataPointsDisplay');
+        const meanDisplay = document.getElementById('meanDisplay');
+        const deviationsDisplay = document.getElementById('deviationsDisplay');
+        const sumDeviationsDisplay = document.getElementById('sumDeviationsDisplay');
+        const dataInputsContainer = document.getElementById('dataInputs');
+        const addPointBtn = document.getElementById('addPointBtn');
+        const removePointBtn = document.getElementById('removePointBtn');
+        const tooltip = document.createElement('div'); // Tooltip erstellen
+        tooltip.className = 'tooltip';
+        document.body.appendChild(tooltip);
+
+        // --- Berechnungsfunktionen ---
+        function calculateMean(data) {
+            if (data.length === 0) return 0;
+            const sum = data.reduce((acc, val) => acc + val, 0);
+            return sum / data.length;
+        }
+
+        function calculateDeviations(data, mean) {
+            return data.map(val => val - mean);
+        }
+
+        function calculateSumDeviations(deviations) {
+            if (deviations.length === 0) return 0;
+            // Kleine Ungenauigkeiten durch Fließkommazahlen vermeiden
+            const sum = deviations.reduce((acc, val) => acc + val, 0);
+            return Math.abs(sum) < 1e-10 ? 0 : sum; // Wenn sehr nah an 0, dann 0
+        }
+
+        // --- Visualisierungsfunktion ---
+        function visualize() {
+            const mean = calculateMean(dataPoints);
+            const deviations = calculateDeviations(dataPoints, mean);
+            const sumDeviations = calculateSumDeviations(deviations);
+
+            // Ergebnisse anzeigen
+            dataPointsDisplay.textContent = dataPoints.join(', ');
+            meanDisplay.textContent = mean.toFixed(2); // Auf 2 Nachkommastellen runden
+            deviationsDisplay.textContent = deviations.map(d => d.toFixed(2)).join(', ');
+            sumDeviationsDisplay.textContent = sumDeviations.toFixed(2); // Sollte (nahe) 0 sein
+
+            // SVG leeren und neu zeichnen
+            svg.innerHTML = ''; // Alte Elemente entfernen
+
+            if (dataPoints.length === 0) return; // Nichts zeichnen bei leeren Daten
+
+            const padding = 40;
+            const svgWidth = svg.clientWidth;
+            const svgHeight = svg.clientHeight;
+            const dataMin = Math.min(...dataPoints, mean - 2); // Etwas Puffer lassen
+            const dataMax = Math.max(...dataPoints, mean + 2); // Etwas Puffer lassen
+            const dataRange = dataMax - dataMin === 0 ? 1 : dataMax - dataMin; // Verhindert Division durch 0
+
+            // Skalierungsfunktion: Datenwert -> SVG x-Koordinate
+            function scaleX(value) {
+                if (dataRange === 0) return svgWidth / 2; // Zentrieren, wenn nur ein Wert
+                return padding + ((value - dataMin) / dataRange) * (svgWidth - 2 * padding);
+            }
+
+            // 1. Zahlenstrahl zeichnen
+            const axisY = svgHeight / 2 + 20; // Y-Position der Achse
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', padding / 2);
+            line.setAttribute('y1', axisY);
+            line.setAttribute('x2', svgWidth - padding / 2);
+            line.setAttribute('y2', axisY);
+            line.setAttribute('stroke', '#9ca3af'); // Graue Achse
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+
+             // Achsenbeschriftung (Min/Max)
+             const textMin = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             textMin.setAttribute('x', padding / 2);
+             textMin.setAttribute('y', axisY + 15);
+             textMin.setAttribute('font-size', '0.7rem');
+             textMin.setAttribute('fill', '#6b7280');
+             textMin.textContent = dataMin.toFixed(1);
+             svg.appendChild(textMin);
+
+             const textMax = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+             textMax.setAttribute('x', svgWidth - padding / 2);
+             textMax.setAttribute('y', axisY + 15);
+             textMax.setAttribute('text-anchor', 'end');
+             textMax.setAttribute('font-size', '0.7rem');
+             textMax.setAttribute('fill', '#6b7280');
+             textMax.textContent = dataMax.toFixed(1);
+             svg.appendChild(textMax);
+
+
+            // 2. Datenpunkte zeichnen
+            dataPoints.forEach(value => {
+                const cx = scaleX(value);
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', axisY);
+                circle.setAttribute('r', 5);
+                circle.classList.add('data-point');
+                // Tooltip hinzufügen
+                circle.addEventListener('mouseover', (e) => showTooltip(e, `x = ${value}`));
+                circle.addEventListener('mousemove', moveTooltip);
+                circle.addEventListener('mouseout', hideTooltip);
+                svg.appendChild(circle);
+            });
+
+            // 3. Mittelwert einzeichnen
+            const meanX = scaleX(mean);
+            const meanLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            meanLine.setAttribute('x1', meanX);
+            meanLine.setAttribute('y1', axisY - 25); // Linie oberhalb der Achse
+            meanLine.setAttribute('x2', meanX);
+            meanLine.setAttribute('y2', axisY + 25); // Linie unterhalb der Achse
+            meanLine.classList.add('mean-line');
+            svg.appendChild(meanLine);
+
+            const meanText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            meanText.setAttribute('x', meanX);
+            meanText.setAttribute('y', axisY - 30); // Text über der Linie
+            meanText.setAttribute('text-anchor', 'middle');
+            meanText.classList.add('mean-text');
+            meanText.textContent = `x̄ = ${mean.toFixed(2)}`;
+            svg.appendChild(meanText);
+
+            // 4. Abweichungen zeichnen
+            const devY = axisY - 10; // Y-Position für Abweichungspfeile/-linien
+            deviations.forEach((dev, index) => {
+                const startX = meanX;
+                const endX = scaleX(dataPoints[index]);
+                const deviationLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                deviationLine.setAttribute('x1', startX);
+                deviationLine.setAttribute('y1', devY);
+                deviationLine.setAttribute('x2', endX);
+                deviationLine.setAttribute('y2', devY);
+                deviationLine.classList.add('deviation-line');
+                // Farbe basierend auf Vorzeichen
+                deviationLine.classList.add(dev >= 0 ? 'deviation-positive' : 'deviation-negative');
+                 // Tooltip hinzufügen
+                 deviationLine.addEventListener('mouseover', (e) => showTooltip(e, `Abw. = ${dev.toFixed(2)}`));
+                 deviationLine.addEventListener('mousemove', moveTooltip);
+                 deviationLine.addEventListener('mouseout', hideTooltip);
+
+                svg.appendChild(deviationLine);
+
+                // Optional: Kleine Pfeilspitze am Ende der Linie
+                const arrowSize = 4;
+                const angle = startX < endX ? 0 : Math.PI; // Richtung des Pfeils
+                const arrow1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                arrow1.setAttribute('x1', endX);
+                arrow1.setAttribute('y1', devY);
+                arrow1.setAttribute('x2', endX - arrowSize * Math.cos(angle - Math.PI / 6));
+                arrow1.setAttribute('y2', devY - arrowSize * Math.sin(angle - Math.PI / 6));
+                arrow1.classList.add('deviation-line', dev >= 0 ? 'deviation-positive' : 'deviation-negative');
+                svg.appendChild(arrow1);
+
+                const arrow2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                arrow2.setAttribute('x1', endX);
+                arrow2.setAttribute('y1', devY);
+                arrow2.setAttribute('x2', endX - arrowSize * Math.cos(angle + Math.PI / 6));
+                arrow2.setAttribute('y2', devY - arrowSize * Math.sin(angle + Math.PI / 6));
+                arrow2.classList.add('deviation-line', dev >= 0 ? 'deviation-positive' : 'deviation-negative');
+                svg.appendChild(arrow2);
+
+                // Optional: Textlabel für Abweichung (kann überladen wirken)
+                // const devText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                // devText.setAttribute('x', (startX + endX) / 2);
+                // devText.setAttribute('y', devY - 5);
+                // devText.setAttribute('text-anchor', 'middle');
+                // devText.classList.add('deviation-label');
+                // devText.textContent = dev.toFixed(1);
+                // svg.appendChild(devText);
+            });
+
+            // Eingabefelder aktualisieren
+            updateDataInputs();
+        }
+
+         // --- Tooltip Funktionen ---
+         function showTooltip(event, text) {
+             tooltip.textContent = text;
+             tooltip.style.opacity = '1';
+             moveTooltip(event); // Sofort positionieren
+         }
+
+         function moveTooltip(event) {
+             // Positioniert Tooltip leicht versetzt zum Mauszeiger
+             tooltip.style.left = `${event.pageX + 10}px`;
+             tooltip.style.top = `${event.pageY + 10}px`;
+         }
+
+         function hideTooltip() {
+             tooltip.style.opacity = '0';
+         }
+
+
+        // --- Funktionen für Interaktivität ---
+        function updateDataInputs() {
+            dataInputsContainer.innerHTML = ''; // Alte Inputs löschen
+            dataPoints.forEach((value, index) => {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = value;
+                input.step = 'any'; // Erlaubt Dezimalzahlen
+                input.dataset.index = index; // Index speichern
+                input.addEventListener('change', handleInputChange);
+                input.addEventListener('input', handleInputChange); // Live-Update
+                dataInputsContainer.appendChild(input);
+            });
+        }
+
+        function handleInputChange(event) {
+            const index = parseInt(event.target.dataset.index);
+            const newValue = parseFloat(event.target.value);
+            if (!isNaN(newValue)) { // Nur aktualisieren, wenn es eine gültige Zahl ist
+                dataPoints[index] = newValue;
+                visualize(); // Neu zeichnen bei Änderung
+            }
+        }
+
+        addPointBtn.addEventListener('click', () => {
+            // Fügt einen neuen Punkt hinzu (z.B. den letzten Wert + 1 oder einen Standardwert)
+            const newValue = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1] + 1 : 5;
+            dataPoints.push(newValue);
+            visualize();
+        });
+
+        removePointBtn.addEventListener('click', () => {
+            if (dataPoints.length > 0) {
+                dataPoints.pop(); // Entfernt den letzten Punkt
+                visualize();
+            }
+        });
+
+        // --- Initialer Aufruf ---
+        visualize();
+
+        // Neu zeichnen, wenn Fenstergröße geändert wird (für Responsive SVG)
+        window.addEventListener('resize', visualize);
+
+    </script>
+
+</body>
+</html>
