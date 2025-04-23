@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histogramm: Körpergrößen</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling für bessere Lesbarkeit */
+        body {
+            font-family: 'Inter', sans-serif; /* Standard-Schriftart */
+        }
+        .chart-container {
+            /* Responsive Breite mit maximaler Breite */
+            width: 90%;
+            max-width: 800px; /* Etwas breiter für bessere Lesbarkeit der Labels */
+            margin: 40px auto; /* Zentrierung und Abstand */
+            padding: 25px;
+            border: 1px solid #e2e8f0; /* Heller Rand */
+            border-radius: 12px; /* Stärkere Abrundung */
+            background-color: #ffffff; /* Weißer Hintergrund */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); /* Deutlicherer Schatten */
+        }
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #1a202c; /* Dunkle Textfarbe */
+        }
+        p.description {
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 25px;
+            color: #4a5568; /* Graue Textfarbe */
+            font-size: 1em;
+            line-height: 1.6;
+        }
+         p.info {
+            text-align: center;
+            margin-top: 5px;
+            font-style: italic;
+            color: #718096; /* Helleres Grau */
+            font-size: 0.9em;
+        }
+        /* Sicherstellen, dass Canvas responsive ist */
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <h1 class="text-3xl font-bold mt-10">Histogramm: Klassierte Körpergrößen</h1>
+
+    <div class="chart-container">
+        <h2 class="text-xl font-semibold">Relative Häufigkeiten von Körpergrößen in 5cm-Intervallen</h2>
+        <p class="description">
+            Dieses Histogramm visualisiert die Verteilung von Körpergrößen, basierend auf Daten (ähnlich Folie 13),
+            die in Klassen mit einer einheitlichen Breite von 5 cm eingeteilt wurden.
+            Da alle Klassen gleich breit sind, ist die Höhe jedes Balkens direkt proportional zur relativen Häufigkeit ($f_k$)
+            der Beobachtungen in dieser Klasse.
+        </p>
+        <canvas id="bodyHeightHistogram"></canvas>
+         <p class="info">Datenquelle: Angelehnt an Folie 13, Veranstaltung 2.</p>
+    </div>
+
+    <script>
+        // --- Daten basierend auf Folie 13 (5cm-Intervalle) ---
+        const labels = [
+            '1,33-1,37 m',
+            '1,38-1,42 m',
+            '1,43-1,47 m',
+            '1,48-1,52 m',
+            '1,53-1,57 m',
+            '1,58-1,62 m'
+        ]; // Klassenbezeichnungen
+        const relativeFrequencies = [
+            0.0357, // 1/28
+            0.0714, // 2/28
+            0.2857, // 8/28
+            0.4286, // 12/28
+            0.0714, // 2/28
+            0.1071  // 3/28
+             // Gerundet für die Darstellung, Summe ~ 1
+        ]; // Relative Häufigkeiten f_k
+
+        // --- Chart.js Konfiguration ---
+        const ctx = document.getElementById('bodyHeightHistogram').getContext('2d');
+        const bodyHeightChart = new Chart(ctx, {
+            type: 'bar', // Balkendiagramm
+            data: {
+                labels: labels, // Beschriftungen der x-Achse (Klassen)
+                datasets: [{
+                    label: 'Relative Häufigkeit', // Label für Tooltips
+                    data: relativeFrequencies, // Die Datenwerte (Höhe der Balken)
+                    backgroundColor: 'rgba(79, 70, 229, 0.6)', // Indigo-Farbton mit Transparenz
+                    borderColor: 'rgba(79, 70, 229, 1)', // Randfarbe
+                    borderWidth: 1, // Randbreite
+                    barPercentage: 1.0, // Balken füllen die Kategoriebreite
+                    categoryPercentage: 1.0 // Kategorien füllen den verfügbaren Platz (ergibt aneinandergrenzende Balken)
+                }]
+            },
+            options: {
+                responsive: true, // Diagramm passt sich an Containergröße an
+                maintainAspectRatio: true, // Seitenverhältnis beibehalten (kann bei Bedarf auf false gesetzt werden)
+                scales: {
+                    x: { // Konfiguration der x-Achse
+                        title: {
+                            display: true,
+                            text: 'Körpergröße (klassiert)',
+                            font: { size: 14, weight: 'bold' },
+                            padding: { top: 10 }
+                        },
+                        grid: {
+                            display: false // Kein vertikales Gitter
+                        },
+                        ticks: {
+                            autoSkip: false, // Alle Labels anzeigen
+                            maxRotation: 0, // Labels horizontal halten
+                            minRotation: 0
+                        }
+                    },
+                    y: { // Konfiguration der y-Achse
+                        beginAtZero: true, // Startet bei 0
+                        title: {
+                            display: true,
+                            text: 'Relative Häufigkeit (f_k)',
+                            font: { size: 14, weight: 'bold' },
+                             padding: { bottom: 10 }
+                        },
+                        grid: {
+                            color: '#e5e7eb' // Helles horizontales Gitter
+                        },
+                        ticks: {
+                            // Formatierung der Ticks als Prozent (optional)
+                            // callback: function(value) {
+                            //     return (value * 100).toFixed(0) + '%';
+                            // }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // Keine Legende benötigt bei nur einem Datensatz
+                    },
+                    tooltip: { // Konfiguration der Tooltips beim Überfahren der Balken
+                        enabled: true,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)', // Dunkler Hintergrund
+                        titleFont: { size: 14 },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            // Zeigt den Wert im Tooltip genauer an
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    // Formatierung als Prozent oder Dezimalzahl
+                                    label += (context.parsed.y * 100).toFixed(2) + '%';
+                                    // label += context.parsed.y.toFixed(4);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                animation: { // Leichte Animation beim Laden
+                    duration: 1000,
+                    easing: 'easeOutCubic'
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
