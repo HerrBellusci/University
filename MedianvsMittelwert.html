@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Median Minimiert Absolute Abstände</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliches Styling für bessere Lesbarkeit */
+        body {
+            font-family: 'Inter', sans-serif; /* Tailwind Standard-Schriftart */
+        }
+        .data-point {
+            transition: all 0.3s ease;
+        }
+        .deviation-line {
+            transition: all 0.3s ease;
+            stroke-width: 2;
+        }
+        /* Stellt sicher, dass der SVG-Container Platz einnimmt */
+        #visualization svg {
+            display: block;
+            margin: auto;
+        }
+        /* Style für den Slider-Daumen */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6; /* blue-500 */
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6; /* blue-500 */
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Visualisierung: Median minimiert absolute Abstände</h1>
+
+        <div class="mb-6">
+            <label for="dataInput" class="block text-sm font-medium text-gray-700 mb-1">Datenpunkte eingeben (komma- oder leerzeichengetrennt):</label>
+            <input type="text" id="dataInput" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="z.B. 1, 2, 3, 8, 10">
+            <button id="updateButton" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Aktualisieren & Visualisieren
+            </button>
+        </div>
+
+        <div id="errorDisplay" class="text-red-600 mb-4 hidden"></div>
+
+        <div id="results" class="space-y-4 hidden">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-700">Datenübersicht:</h2>
+                <p class="text-gray-600">Sortierte Daten: <code id="sortedData" class="bg-gray-200 px-1 rounded"></code></p>
+                <p class="text-gray-600">Anzahl (n): <span id="count" class="font-medium"></span></p>
+            </div>
+
+            <div id="visualization" class="mt-4 p-4 border border-gray-200 rounded-md bg-gray-50 overflow-x-auto">
+                 <h3 class="text-md font-semibold text-gray-700 mb-2 text-center">Zahlenstrahl</h3>
+                 <svg id="numberLine" width="100%" height="150" class="mx-auto"></svg>
+            </div>
+
+             <div class="mt-6">
+                <label for="customPointSlider" class="block text-sm font-medium text-gray-700">Wähle einen Vergleichspunkt C: <span id="customPointValue" class="font-bold text-blue-600"></span></label>
+                <input type="range" id="customPointSlider" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" min="0" max="10" step="0.1">
+             </div>
+
+            <div>
+                <h2 class="text-lg font-semibold text-gray-700 mt-4">Summe der absoluten Abstände von allen Datenpunkten zu:</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                    <div class="p-3 bg-green-100 border border-green-300 rounded-md">
+                        <p class="font-medium text-green-800">Median (<span id="medianValueText"></span>):</p>
+                        <p id="sumMedian" class="text-xl font-bold text-green-900"></p>
+                        <p class="text-sm text-green-700">(Dieser Wert sollte minimal sein)</p>
+                    </div>
+                    <div class="p-3 bg-yellow-100 border border-yellow-300 rounded-md">
+                        <p class="font-medium text-yellow-800">Arithm. Mittel (<span id="meanValueText"></span>):</p>
+                        <p id="sumMean" class="text-xl font-bold text-yellow-900"></p>
+                    </div>
+                    <div class="p-3 bg-blue-100 border border-blue-300 rounded-md">
+                        <p class="font-medium text-blue-800">Punkt C (<span id="customPointValueText"></span>):</p>
+                        <p id="sumCustom" class="text-xl font-bold text-blue-900"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Elemente holen ---
+        const dataInput = document.getElementById('dataInput');
+        const updateButton = document.getElementById('updateButton');
+        const errorDisplay = document.getElementById('errorDisplay');
+        const resultsDiv = document.getElementById('results');
+        const sortedDataSpan = document.getElementById('sortedData');
+        const countSpan = document.getElementById('count');
+        const medianValueText = document.getElementById('medianValueText');
+        const meanValueText = document.getElementById('meanValueText');
+        const customPointValueText = document.getElementById('customPointValueText');
+        const sumMedianSpan = document.getElementById('sumMedian');
+        const sumMeanSpan = document.getElementById('sumMean');
+        const sumCustomSpan = document.getElementById('sumCustom');
+        const visualizationDiv = document.getElementById('visualization');
+        const numberLineSvg = document.getElementById('numberLine');
+        const customPointSlider = document.getElementById('customPointSlider');
+        const customPointValueSpan = document.getElementById('customPointValue');
+
+        let currentData = []; // Globale Variable für aktuelle Daten
+        let currentMedian = 0;
+        let currentMean = 0;
+
+        // --- Hilfsfunktionen ---
+        function parseInput(input) {
+            // Entfernt Leerzeichen, ersetzt Kommas durch Punkte (für Dezimalzahlen), teilt bei Leerzeichen oder Kommas
+            const cleanedInput = input.trim().replace(/,/g, '.');
+            const parts = cleanedInput.split(/[\s,]+/); // Trennt bei Leerzeichen oder Kommas
+            const numbers = parts
+                .map(part => parseFloat(part)) // Konvertiert Teile in Zahlen
+                .filter(num => !isNaN(num)); // Filtert ungültige Zahlen (NaN) heraus
+            return numbers;
+        }
+
+        function calculateMedian(arr) {
+            if (!arr || arr.length === 0) return NaN;
+            const sortedArr = [...arr].sort((a, b) => a - b); // Kopieren und sortieren
+            const mid = Math.floor(sortedArr.length / 2);
+            if (sortedArr.length % 2 === 0) {
+                // Gerade Anzahl: Mittelwert der beiden mittleren Zahlen
+                return (sortedArr[mid - 1] + sortedArr[mid]) / 2;
+            } else {
+                // Ungerade Anzahl: Die mittlere Zahl
+                return sortedArr[mid];
+            }
+        }
+
+        function calculateMean(arr) {
+             if (!arr || arr.length === 0) return NaN;
+            const sum = arr.reduce((acc, val) => acc + val, 0);
+            return sum / arr.length;
+        }
+
+        function calculateSumAbsoluteDeviations(arr, point) {
+            if (!arr || arr.length === 0) return 0;
+            return arr.reduce((acc, val) => acc + Math.abs(val - point), 0);
+        }
+
+        // --- Visualisierungsfunktion (SVG) ---
+        function drawNumberLine(data, median, mean, customPoint) {
+            numberLineSvg.innerHTML = ''; // SVG leeren
+
+            if (!data || data.length === 0) return;
+
+            const padding = 40; // Rand links/rechts
+            const svgWidth = numberLineSvg.clientWidth;
+            const svgHeight = numberLineSvg.clientHeight;
+
+            // Datenbereich bestimmen (mit etwas Puffer)
+            let minVal = Math.min(...data, median, mean, customPoint);
+            let maxVal = Math.max(...data, median, mean, customPoint);
+            const range = maxVal - minVal;
+
+            // Puffer hinzufügen, besonders wenn nur ein Datenpunkt vorhanden ist
+            const buffer = range === 0 ? 1 : range * 0.1; // 10% Puffer oder mind. 1
+            minVal -= buffer;
+            maxVal += buffer;
+            const displayRange = maxVal - minVal;
+
+            // Skalierungsfunktion: Datenwert -> SVG x-Koordinate
+            const scaleX = (value) => padding + ((value - minVal) / displayRange) * (svgWidth - 2 * padding);
+
+            // Zahlenstrahl zeichnen
+            const lineY = svgHeight / 2 + 20; // Y-Position des Hauptstrahls
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute('x1', padding);
+            line.setAttribute('y1', lineY);
+            line.setAttribute('x2', svgWidth - padding);
+            line.setAttribute('y2', lineY);
+            line.setAttribute('stroke', '#9ca3af'); // gray-400
+            line.setAttribute('stroke-width', '2');
+            numberLineSvg.appendChild(line);
+
+            // Haupt-Ticks und Labels zeichnen (optional, vereinfacht)
+            const numTicks = 5;
+            for (let i = 0; i <= numTicks; i++) {
+                const value = minVal + (displayRange / numTicks) * i;
+                const x = scaleX(value);
+                // Tick
+                const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                tick.setAttribute('x1', x);
+                tick.setAttribute('y1', lineY - 5);
+                tick.setAttribute('x2', x);
+                tick.setAttribute('y2', lineY + 5);
+                tick.setAttribute('stroke', '#9ca3af'); // gray-400
+                tick.setAttribute('stroke-width', '1');
+                numberLineSvg.appendChild(tick);
+                // Label
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute('x', x);
+                label.setAttribute('y', lineY + 20);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('font-size', '10px');
+                label.setAttribute('fill', '#6b7280'); // gray-500
+                label.textContent = value.toFixed(1);
+                numberLineSvg.appendChild(label);
+            }
+
+
+            // Datenpunkte zeichnen
+            data.forEach(value => {
+                const x = scaleX(value);
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', lineY);
+                circle.setAttribute('r', '5');
+                circle.setAttribute('fill', '#60a5fa'); // blue-400
+                circle.classList.add('data-point');
+                numberLineSvg.appendChild(circle);
+            });
+
+            // Median, Mittelwert und Custom Point markieren
+            const markerY = lineY - 15; // Y-Position für Marker-Labels
+            const markerSize = 8;
+
+            // Median Marker
+            const medianX = scaleX(median);
+            const medianMarker = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            medianMarker.setAttribute('points', `${medianX},${lineY - markerSize/2} ${medianX - markerSize/2},${lineY + markerSize/2} ${medianX + markerSize/2},${lineY + markerSize/2}`);
+            medianMarker.setAttribute('fill', '#10b981'); // green-500
+            numberLineSvg.appendChild(medianMarker);
+            const medianLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            medianLabel.setAttribute('x', medianX);
+            medianLabel.setAttribute('y', markerY - 5);
+            medianLabel.setAttribute('text-anchor', 'middle');
+            medianLabel.setAttribute('font-size', '12px');
+            medianLabel.setAttribute('font-weight', 'bold');
+            medianLabel.setAttribute('fill', '#10b981'); // green-500
+            medianLabel.textContent = `Median (${median.toFixed(2)})`;
+            numberLineSvg.appendChild(medianLabel);
+
+            // Mittelwert Marker
+            const meanX = scaleX(mean);
+            const meanMarker = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            meanMarker.setAttribute('x', meanX - markerSize/2);
+            meanMarker.setAttribute('y', lineY - markerSize/2);
+            meanMarker.setAttribute('width', markerSize);
+            meanMarker.setAttribute('height', markerSize);
+            meanMarker.setAttribute('fill', '#f59e0b'); // yellow-500
+            numberLineSvg.appendChild(meanMarker);
+            const meanLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            meanLabel.setAttribute('x', meanX);
+            meanLabel.setAttribute('y', markerY - 20); // Etwas höher
+            meanLabel.setAttribute('text-anchor', 'middle');
+            meanLabel.setAttribute('font-size', '12px');
+            meanLabel.setAttribute('font-weight', 'bold');
+            meanLabel.setAttribute('fill', '#f59e0b'); // yellow-500
+            meanLabel.textContent = `Mittelw. (${mean.toFixed(2)})`;
+            numberLineSvg.appendChild(meanLabel);
+
+            // Custom Point C Marker
+            const customX = scaleX(customPoint);
+            const customMarker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            customMarker.setAttribute('cx', customX);
+            customMarker.setAttribute('cy', lineY);
+            customMarker.setAttribute('r', markerSize/2);
+            customMarker.setAttribute('fill', 'none');
+            customMarker.setAttribute('stroke', '#3b82f6'); // blue-500
+            customMarker.setAttribute('stroke-width', '2');
+            numberLineSvg.appendChild(customMarker);
+            const customLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            customLabel.setAttribute('x', customX);
+            customLabel.setAttribute('y', markerY - 35); // Noch etwas höher
+            customLabel.setAttribute('text-anchor', 'middle');
+            customLabel.setAttribute('font-size', '12px');
+            customLabel.setAttribute('font-weight', 'bold');
+            customLabel.setAttribute('fill', '#3b82f6'); // blue-500
+            customLabel.textContent = `C (${customPoint.toFixed(2)})`;
+            numberLineSvg.appendChild(customLabel);
+        }
+
+
+        // --- Hauptfunktion zum Aktualisieren ---
+        function updateVisualization() {
+            const inputText = dataInput.value;
+            currentData = parseInput(inputText);
+
+            if (currentData.length === 0) {
+                errorDisplay.textContent = 'Bitte gültige Zahlen eingeben.';
+                errorDisplay.classList.remove('hidden');
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
+            errorDisplay.classList.add('hidden');
+            resultsDiv.classList.remove('hidden');
+
+            // Berechnungen
+            const sorted = [...currentData].sort((a, b) => a - b);
+            currentMedian = calculateMedian(sorted);
+            currentMean = calculateMean(sorted);
+            const currentCustomPoint = parseFloat(customPointSlider.value);
+
+            const sumDevMedian = calculateSumAbsoluteDeviations(sorted, currentMedian);
+            const sumDevMean = calculateSumAbsoluteDeviations(sorted, currentMean);
+            const sumDevCustom = calculateSumAbsoluteDeviations(sorted, currentCustomPoint);
+
+            // Ergebnisse anzeigen
+            sortedDataSpan.textContent = sorted.join(', ');
+            countSpan.textContent = sorted.length;
+            medianValueText.textContent = currentMedian.toFixed(2);
+            meanValueText.textContent = currentMean.toFixed(2);
+            customPointValueText.textContent = currentCustomPoint.toFixed(2); // Aktualisiert den Text bei den Summen
+
+            sumMedianSpan.textContent = sumDevMedian.toFixed(3);
+            sumMeanSpan.textContent = sumDevMean.toFixed(3);
+            sumCustomSpan.textContent = sumDevCustom.toFixed(3);
+
+             // Slider anpassen
+            const minVal = Math.min(...sorted);
+            const maxVal = Math.max(...sorted);
+            const range = maxVal - minVal;
+            const buffer = range === 0 ? 5 : range * 0.2; // 20% Puffer oder mind. 5
+            customPointSlider.min = (minVal - buffer).toFixed(1);
+            customPointSlider.max = (maxVal + buffer).toFixed(1);
+            // Setze den Startwert des Sliders auf den Mittelwert, wenn er zum ersten Mal initialisiert wird
+             if (customPointValueSpan.textContent === "") { // Prüft, ob der Slider schon mal gesetzt wurde
+                 customPointSlider.value = currentMean.toFixed(1);
+             }
+             customPointValueSpan.textContent = parseFloat(customPointSlider.value).toFixed(2); // Initialen Wert anzeigen
+
+
+            // Visualisierung zeichnen
+            drawNumberLine(sorted, currentMedian, currentMean, parseFloat(customPointSlider.value));
+        }
+
+         // --- Event Listener ---
+        updateButton.addEventListener('click', updateVisualization);
+        // Optional: Aktualisieren bei Enter-Taste im Input-Feld
+        dataInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                updateVisualization();
+            }
+        });
+
+        // Slider Event Listener
+        customPointSlider.addEventListener('input', () => {
+             const currentCustomPoint = parseFloat(customPointSlider.value);
+             customPointValueSpan.textContent = currentCustomPoint.toFixed(2); // Wert neben dem Slider aktualisieren
+             customPointValueText.textContent = currentCustomPoint.toFixed(2); // Wert bei der Summe aktualisieren
+
+             if (currentData.length > 0) {
+                 const sumDevCustom = calculateSumAbsoluteDeviations(currentData, currentCustomPoint);
+                 sumCustomSpan.textContent = sumDevCustom.toFixed(3);
+                 // Visualisierung neu zeichnen, um die Position von C zu aktualisieren
+                 drawNumberLine(currentData, currentMedian, currentMean, currentCustomPoint);
+             }
+        });
+
+        // Initialer Aufruf mit Beispieldaten
+        dataInput.value = '1, 2, 3, 8, 10';
+        updateVisualization();
+
+    </script>
+</body>
+</html>
