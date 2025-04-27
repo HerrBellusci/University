@@ -220,21 +220,3 @@
 
 </body>
 </html>
-```
-
-**Was der Code macht:**
-
-1.  **HTML:** Definiert die Struktur der Seite mit drei Bereichen für die Diagramme (`<canvas>`).
-2.  **CSS (Tailwind + Style-Block):** Sorgt für ein ansprechendes, responsives Layout mit abgerundeten Ecken, Schatten und guter Lesbarkeit.
-3.  **JavaScript:**
-    * Lädt die Chart.js-Bibliothek.
-    * Definiert Beispieldaten (`labels...`, `freqRel...`, `classWidths...`).
-    * Berechnet die Häufigkeitsdichte für das korrekte Histogramm mit ungleichen Breiten.
-    * Erstellt eine Basis-Konfiguration (`configBase`) für alle Diagramme (Balkendiagramm, Achsen, Tooltips, aneinandergrenzende Balken).
-    * Erzeugt drei Chart-Instanzen:
-        * `histogramEqualWidth`: Zeigt relative Häufigkeiten als Höhe (korrekt bei gleicher Breite).
-        * `histogramUnequalWidthCorrect`: Zeigt Häufigkeitsdichte als Höhe (korrekt bei ungleicher Breite). Die tatsächlichen Breiten werden zur Verdeutlichung in die Labels geschrieben.
-        * `histogramUnequalWidthWrong`: Zeigt relative Häufigkeiten als Höhe (falsch/irreführend bei ungleicher Breite).
-    * Die Y-Achsen sind entsprechend beschriftet, um den Unterschied (Relative Häufigkeit vs. Häufigkeitsdichte) klarzumachen.
-
-Du kannst diesen HTML-Code direkt in einer Datei speichern (z.B. `histogramme.html`) und im Browser öffnen, um die interaktiven Diagramme zu seh
