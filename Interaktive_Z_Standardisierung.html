@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktive Z-Standardisierung</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true // Wichtig, damit z.B. \mu funktioniert
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Verbessertes Rendering für MathJax SVG */
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Zusätzliches Styling für bessere Lesbarkeit */
+        .math-formula {
+            font-size: 1.1rem;
+            margin: 0.5rem 0;
+            /* Sicherstellen, dass MathJax Platz hat */
+            display: inline-block;
+            min-width: 150px; /* Beispielwert, anpassen bei Bedarf */
+        }
+        .chart-container {
+            position: relative;
+            height: 350px; /* Feste Höhe für Konsistenz */
+            width: 100%;   /* Volle Breite des Containers */
+            max-width: 600px; /* Maximale Breite begrenzen */
+            margin: 1rem auto; /* Zentrieren */
+        }
+        canvas {
+             display: block;
+             box-sizing: border-box;
+             height: 350px;
+             width: 100%;
+        }
+         /* Styling für bessere Sichtbarkeit der Slider-Daumen */
+        input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          background: #3b82f6; /* Tailwind blue-500 */
+          border-radius: 50%;
+          cursor: pointer;
+          margin-top: -8px; /* Vertikale Zentrierung */
+        }
+
+        input[type=range]::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          background: #3b82f6; /* Tailwind blue-500 */
+          border-radius: 50%;
+          cursor: pointer;
+          border: none;
+        }
+        /* Fix für MathJax Rendering Flackern (optional) */
+        mjx-container {
+            display: inline-block !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+    <div class="max-w-6xl mx-auto bg-white p-6 md:p-8 rounded-lg shadow-md">
+
+        <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6">
+            Visualisierung der Z-Standardisierung (Aufgabe 3)
+        </h1>
+
+        <p class="text-gray-700 mb-6 text-center">
+            Diese Seite visualisiert, wie ein Wert $x$ aus einer Normalverteilung $N(\mu, \sigma^2)$ in einen z-Wert der Standardnormalverteilung $N(0, 1)$ transformiert wird und wie die Wahrscheinlichkeit $P(X < x)$ berechnet wird.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-4 border border-gray-200 rounded-md">
+            <div>
+                <label for="meanInput" class="block text-sm font-medium text-gray-700">Erwartungswert ($\mu$)</label>
+                <input type="range" id="meanInput" min="0" max="20" value="8" step="0.5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-1">
+                <input type="number" id="meanValue" value="8" step="0.5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+            </div>
+            <div>
+                <label for="stdDevInput" class="block text-sm font-medium text-gray-700">Standardabweichung ($\sigma$)</label>
+                <input type="range" id="stdDevInput" min="0.5" max="10" value="2" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-1">
+                 <input type="number" id="stdDevValue" value="2" step="0.1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+            </div>
+            <div>
+                <label for="xValueInput" class="block text-sm font-medium text-gray-700">Wert ($x$)</label>
+                <input type="range" id="xValueInput" min="-5" max="25" value="9" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-1">
+                 <input type="number" id="xValueValue" value="9" step="0.1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+            </div>
+        </div>
+
+        <div class="bg-blue-50 p-4 rounded-md mb-8 text-center">
+            <p class="text-lg font-medium text-gray-800 mb-2">Berechnete Werte:</p>
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8 mt-2" id="resultsArea">
+                 <p class="math-formula text-blue-700">z-Wert: $z = \frac{x - \mu}{\sigma} = $ <span id="zValueOutput" class="font-bold">0.50</span></p>
+                 <p class="math-formula text-blue-700">Wahrsch.: $P(X < x) = \Phi(z) = $ <span id="probabilityOutput" class="font-bold">0.6915</span></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="border border-gray-200 rounded-md p-4">
+                <h2 class="text-xl font-semibold text-center text-gray-700 mb-2">Ursprüngliche Normalverteilung $N(\mu, \sigma^2)$</h2>
+                <div class="chart-container">
+                    <canvas id="normalDistChart"></canvas>
+                </div>
+                <p class="text-center text-sm text-gray-600 mt-2">Zeigt die Verteilung für $\mu = <span id="muVal1">8</span>$ und $\sigma = <span id="sigmaVal1">2</span>$.</p>
+                 <p class="text-center text-sm text-gray-600">Die blaue Fläche repräsentiert $P(X < <span id="xVal1">9</span>)$.</p>
+            </div>
+
+            <div class="border border-gray-200 rounded-md p-4">
+                <h2 class="text-xl font-semibold text-center text-gray-700 mb-2">Standardnormalverteilung $N(0, 1)$</h2>
+                 <div class="chart-container">
+                    <canvas id="standardNormalDistChart"></canvas>
+                </div>
+                <p class="text-center text-sm text-gray-600 mt-2">Zeigt die Standardverteilung ($\mu=0, \sigma=1$).</p>
+                <p class="text-center text-sm text-gray-600">Die blaue Fläche repräsentiert $P(Z < <span id="zVal2">0.50</span>)$.</p>
+            </div>
+        </div>
+
+        <div class="mt-10 pt-6 border-t border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">Erläuterung der Schritte</h2>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                <li>
+                    <strong>Eingabe:</strong> Wählen Sie den Erwartungswert ($\mu$), die Standardabweichung ($\sigma$) der ursprünglichen Normalverteilung und den spezifischen Wert ($x$), für den die Wahrscheinlichkeit $P(X < x)$ berechnet werden soll.
+                </li>
+                <li>
+                    <strong>z-Standardisierung:</strong> Der Wert $x$ wird mithilfe der Formel $z = (x - \mu) / \sigma$ in einen z-Wert umgerechnet. Dieser z-Wert gibt an, wie viele Standardabweichungen der Wert $x$ vom Mittelwert $\mu$ entfernt liegt.
+                </li>
+                <li>
+                    <strong>Wahrscheinlichkeitsberechnung:</strong> Die Wahrscheinlichkeit $P(X < x)$ in der ursprünglichen Verteilung ist gleich der Wahrscheinlichkeit $P(Z < z)$ in der Standardnormalverteilung ($N(0,1)$). Dieser Wert $\Phi(z) = P(Z < z)$ wird berechnet (hier mittels einer Näherungsformel) und entspricht der Fläche unter der Standardnormalverteilungskurve links vom berechneten z-Wert.
+                </li>
+                <li>
+                    <strong>Visualisierung:</strong> Die Diagramme zeigen die Dichtefunktionen der jeweiligen Normalverteilung. Die eingefärbte Fläche visualisiert die berechnete kumulative Wahrscheinlichkeit bis zum Wert $x$ bzw. $z$.
+                </li>
+            </ol>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Chart.js Setup ---
+        const ctxNormal = document.getElementById('normalDistChart').getContext('2d');
+        const ctxStandardNormal = document.getElementById('standardNormalDistChart').getContext('2d');
+        let normalChart;
+        let standardNormalChart;
+
+        // --- Input Elements ---
+        const meanSlider = document.getElementById('meanInput');
+        const meanValueInput = document.getElementById('meanValue');
+        const stdDevSlider = document.getElementById('stdDevInput');
+        const stdDevValueInput = document.getElementById('stdDevValue');
+        const xValueSlider = document.getElementById('xValueInput');
+        const xValueValueInput = document.getElementById('xValueValue');
+
+        // --- Output Elements ---
+        const resultsArea = document.getElementById('resultsArea'); // Container für MathJax Update
+        const zValueOutput = document.getElementById('zValueOutput');
+        const probabilityOutput = document.getElementById('probabilityOutput');
+        const muVal1 = document.getElementById('muVal1');
+        const sigmaVal1 = document.getElementById('sigmaVal1');
+        const xVal1 = document.getElementById('xVal1');
+        const zVal2 = document.getElementById('zVal2');
+
+
+        // --- Helper Functions ---
+
+        // Probability Density Function (PDF) for Normal Distribution
+        function normalPDF(x, mu, sigma) {
+            // Handle sigma=0 case to avoid division by zero
+            if (sigma <= 0) return 0; // Or handle as appropriate, maybe return Infinity at x=mu?
+            const sigmaSq = sigma * sigma;
+            const factor = 1 / Math.sqrt(2 * Math.PI * sigmaSq);
+            const exponent = -((x - mu) * (x - mu)) / (2 * sigmaSq);
+            return factor * Math.exp(exponent);
+        }
+
+        // Cumulative Distribution Function (CDF) for Standard Normal Distribution (Approximation)
+        // Using Abramowitz and Stegun formula 7.1.26 approximation for erf
+        function standardNormalCDF(z) {
+            // constants
+            const p = 0.3275911;
+            const a1 = 0.254829592;
+            const a2 = -0.284496736;
+            const a3 = 1.421413741;
+            const a4 = -1.453152027;
+            const a5 = 1.061405429;
+
+            const sign = (z >= 0) ? 1 : -1;
+            const t = 1 / (1 + p * Math.abs(z));
+            const erf = sign * (1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-z * z));
+
+            return 0.5 * (1 + erf / Math.sqrt(2)); // Corrected erf to CDF conversion
+        }
+
+
+        // Generate data for the normal distribution curve
+        function generateNormalData(mu, sigma, numPoints = 201) { // Use odd number for better center point
+            const data = [];
+            const labels = [];
+             // Ensure sigma is valid before calculating range
+             const safeSigma = Math.max(sigma, 0.1); // Use a minimum sigma for range calculation
+            // Generate points from mu - 4*sigma to mu + 4*sigma for good coverage
+            const minX = mu - 4 * safeSigma;
+            const maxX = mu + 4 * safeSigma;
+            const step = (maxX - minX) / (numPoints - 1);
+
+            for (let i = 0; i < numPoints; i++) {
+                const x = minX + i * step;
+                labels.push(x); // Store as number for easier comparison
+                data.push(normalPDF(x, mu, sigma));
+            }
+            return { labels, data };
+        }
+
+        // --- Chart Creation and Update Function ---
+        function createOrUpdateCharts() {
+            const mu = parseFloat(meanValueInput.value);
+            let sigma = parseFloat(stdDevValueInput.value); // Use let for potential modification
+            const xVal = parseFloat(xValueValueInput.value);
+
+            // Prevent invalid sigma and provide feedback
+            if (isNaN(sigma) || sigma <= 0) {
+                 // Optionally provide visual feedback instead of alert
+                 // e.g., make the input border red
+                 stdDevValueInput.classList.add('border-red-500');
+                 // Use a default valid sigma for calculations to prevent errors
+                 sigma = 0.5;
+                 // Keep the input value as entered by user for correction
+            } else {
+                 stdDevValueInput.classList.remove('border-red-500');
+            }
+
+
+            // Calculate z-value
+            const zVal = (xVal - mu) / sigma;
+            // Calculate probability
+            const probability = standardNormalCDF(zVal);
+
+            // Update output displays
+            zValueOutput.textContent = zVal.toFixed(2);
+            probabilityOutput.textContent = probability.toFixed(4);
+            muVal1.textContent = mu.toFixed(1);
+            sigmaVal1.textContent = sigma.toFixed(1); // Display the potentially corrected sigma
+            xVal1.textContent = xVal.toFixed(1);
+            zVal2.textContent = zVal.toFixed(2);
+
+            // --- Explicitly tell MathJax to re-render the updated area ---
+            if (typeof MathJax !== "undefined" && MathJax.typesetPromise) {
+                MathJax.typesetPromise([resultsArea]).catch(function (err) {
+                    console.error('MathJax typesetting error:', err);
+                });
+            }
+
+
+            // --- Update Original Normal Distribution Chart ---
+            const normalData = generateNormalData(mu, sigma);
+            const normalLabels = normalData.labels;
+            const normalPoints = normalData.data;
+
+            // Find index closest to xVal for shading
+             // Corrected findIndex logic: compare numbers directly
+            let xIndex = normalLabels.findIndex(label => label >= xVal);
+            if(xIndex === -1) xIndex = normalLabels.length; // If xVal is beyond the range
+
+            const normalBackgroundColor = normalPoints.map((_, index) =>
+                index < xIndex ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0)' // Tailwind blue-500 with opacity
+            );
+
+            const normalChartData = {
+                // Use numerical labels for Chart.js x-axis type 'linear'
+                labels: normalLabels,
+                datasets: [{
+                    label: `N(${mu.toFixed(1)}, ${sigma.toFixed(1)}^2)`,
+                    data: normalPoints.map((y, i) => ({ x: normalLabels[i], y: y })), // Use {x,y} objects
+                    borderColor: 'rgb(59, 130, 246)', // Tailwind blue-500
+                    backgroundColor: normalBackgroundColor,
+                    borderWidth: 2,
+                    pointRadius: 0, // Hide points
+                    tension: 0.1, // Reduce tension for more accurate curve shape
+                    fill: true // Enable area fill
+                }]
+            };
+
+             const normalChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Dichte f(x)' }
+                    },
+                    x: {
+                        type: 'linear', // Use linear scale for numerical x-values
+                        title: { display: true, text: 'x' },
+                        ticks: {
+                             maxTicksLimit: 10, // Limit number of x-axis ticks
+                             // Format ticks to fewer decimal places if needed
+                             callback: function(value) {
+                                return Number(value.toFixed(1));
+                             }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true } // Enable tooltips for data points
+                     // Annotation Plugin is removed
+                }
+            };
+
+            if (normalChart) {
+                normalChart.data = normalChartData;
+                // Update options that might change (like scales if axis limits change dynamically)
+                normalChart.options.scales = normalChartOptions.scales;
+                normalChart.update();
+            } else {
+                 normalChart = new Chart(ctxNormal, { type: 'line', data: normalChartData, options: normalChartOptions });
+            }
+
+
+             // --- Update Standard Normal Distribution Chart ---
+            const stdNormalData = generateNormalData(0, 1); // Mu=0, Sigma=1
+            const stdNormalLabels = stdNormalData.labels;
+            const stdNormalPoints = stdNormalData.data;
+
+            // Find index closest to zVal for shading
+            let zIndex = stdNormalLabels.findIndex(label => label >= zVal);
+             if(zIndex === -1) zIndex = stdNormalLabels.length; // If zVal is beyond the range
+
+             const stdNormalBackgroundColor = stdNormalPoints.map((_, index) =>
+                index < zIndex ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0)' // Tailwind blue-500 with opacity
+            );
+
+
+            const stdNormalChartData = {
+                labels: stdNormalLabels,
+                datasets: [{
+                    label: 'N(0, 1)',
+                     data: stdNormalPoints.map((y, i) => ({ x: stdNormalLabels[i], y: y })), // Use {x,y} objects
+                    borderColor: 'rgb(59, 130, 246)', // Tailwind blue-500
+                    backgroundColor: stdNormalBackgroundColor,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.1, // Reduce tension
+                    fill: true
+                }]
+            };
+
+             const stdNormalChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Dichte φ(z)' }
+                    },
+                    x: {
+                         type: 'linear', // Use linear scale
+                        title: { display: true, text: 'z' },
+                         ticks: {
+                             maxTicksLimit: 10, // Limit number of x-axis ticks
+                             callback: function(value) {
+                                return Number(value.toFixed(1));
+                             }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true } // Enable tooltips
+                     // Annotation Plugin is removed
+                }
+            };
+
+             if (standardNormalChart) {
+                standardNormalChart.data = stdNormalChartData;
+                 // Update options that might change
+                 standardNormalChart.options.scales = stdNormalChartOptions.scales;
+                standardNormalChart.update();
+            } else {
+                 standardNormalChart = new Chart(ctxStandardNormal, { type: 'line', data: stdNormalChartData, options: stdNormalChartOptions });
+            }
+        }
+
+        // --- Event Listeners ---
+        function handleInputChange(slider, valueInput, isSigma = false) {
+            const mu = parseFloat(meanValueInput.value);
+            // Get sigma value carefully, use default if invalid during range update
+            let sigmaVal = parseFloat(stdDevValueInput.value);
+            if (isNaN(sigmaVal) || sigmaVal <= 0) sigmaVal = 0.5;
+
+            // Adjust x-value slider range based on new mean or std dev
+            if(!isSigma || (isSigma && sigmaVal > 0)) { // Update range only if sigma is valid
+                 const currentXMin = mu - 4 * sigmaVal;
+                 const currentXMax = mu + 4 * sigmaVal;
+                 xValueSlider.min = currentXMin.toFixed(1);
+                 xValueSlider.max = currentXMax.toFixed(1);
+                 // Ensure x value remains within the new bounds
+                 const currentX = parseFloat(xValueValueInput.value);
+                 if(currentX < currentXMin) xValueValueInput.value = xValueSlider.min;
+                 if(currentX > currentXMax) xValueValueInput.value = xValueSlider.max;
+                 xValueSlider.value = xValueValueInput.value; // Sync slider
+            }
+             createOrUpdateCharts();
+        }
+
+        meanSlider.addEventListener('input', (e) => {
+            meanValueInput.value = e.target.value;
+            handleInputChange(meanSlider, meanValueInput);
+        });
+         meanValueInput.addEventListener('change', (e) => {
+             // Ensure value is within slider bounds if manually entered
+             e.target.value = Math.max(parseFloat(meanSlider.min), Math.min(parseFloat(meanSlider.max), parseFloat(e.target.value)));
+             meanSlider.value = e.target.value;
+             handleInputChange(meanSlider, meanValueInput);
+         });
+
+        stdDevSlider.addEventListener('input', (e) => {
+            stdDevValueInput.value = e.target.value;
+            handleInputChange(stdDevSlider, stdDevValueInput, true); // Pass true for isSigma
+        });
+         stdDevValueInput.addEventListener('change', (e) => {
+             // Ensure value is within slider bounds if manually entered
+             e.target.value = Math.max(parseFloat(stdDevSlider.min), Math.min(parseFloat(stdDevSlider.max), parseFloat(e.target.value)));
+             stdDevSlider.value = e.target.value;
+             handleInputChange(stdDevSlider, stdDevValueInput, true); // Pass true for isSigma
+         });
+
+        xValueSlider.addEventListener('input', (e) => {
+            xValueValueInput.value = e.target.value;
+            createOrUpdateCharts();
+        });
+         xValueValueInput.addEventListener('change', (e) => {
+              // Ensure value is within slider bounds if manually entered
+             e.target.value = Math.max(parseFloat(xValueSlider.min), Math.min(parseFloat(xValueSlider.max), parseFloat(e.target.value)));
+             xValueSlider.value = e.target.value;
+             createOrUpdateCharts();
+         });
+
+        // --- Initial Chart Creation ---
+        function initializeApp() {
+             // Adjust initial range for x slider based on default mu and sigma
+            const initialMu = parseFloat(meanValueInput.value);
+            const initialSigma = parseFloat(stdDevValueInput.value);
+            const initialXMin = (initialMu - 4 * initialSigma).toFixed(1);
+            const initialXMax = (initialMu + 4 * initialSigma).toFixed(1);
+
+            xValueSlider.min = initialXMin;
+            xValueSlider.max = initialXMax;
+            // Ensure initial x value is within the calculated range
+            xValueSlider.value = Math.max(parseFloat(initialXMin), Math.min(parseFloat(initialXMax), parseFloat(xValueValueInput.value)));
+            xValueValueInput.value = xValueSlider.value;
+
+            createOrUpdateCharts(); // Draw initial charts
+        }
+
+        // Ensure MathJax is ready before initial typeset
+        if (typeof MathJax !== "undefined" && MathJax.startup) {
+            MathJax.startup.promise.then(() => {
+                initializeApp();
+            });
+        } else {
+             // Fallback if MathJax loads slower than expected
+             document.addEventListener('DOMContentLoaded', initializeApp);
+        }
+
+
+    </script>
+
+</body>
+</html>
