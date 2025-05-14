@@ -6,6 +6,7 @@
     <title>Statistik Visualisierung (Interaktiv)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -26,6 +27,9 @@
             margin-bottom: 1rem; /* Increased space below main topic */
             font-weight: 600; /* Semibold */
         }
+        .sub-topic-wrapper {
+            margin-bottom: 0.5rem; /* Space between sub-topic items */
+        }
         .sub-topic-box {
             border: 1px solid #93c5fd; /* Lighter blue border */
             background-color: #eff6ff; /* Very light blue background */
@@ -39,8 +43,6 @@
             justify-content: space-between; /* Space for potential icon */
             font-size: 0.9rem; /* Slightly larger font */
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            margin-top: 0.75rem; /* Increased space */
-            margin-left: 0rem; /* Remove left margin, handled by padding */
             cursor: pointer; /* Indicate clickable */
             transition: background-color 0.2s ease-in-out;
         }
@@ -48,8 +50,10 @@
             background-color: #dbeafe; /* Slightly darker on hover */
         }
         .sub-topic-box.active {
-             background-color: #bfdbfe; /* Even darker when active/open */
-             border-color: #60a5fa;
+            background-color: #bfdbfe; /* Even darker when active/open */
+            border-color: #60a5fa;
+            border-bottom-left-radius: 0; /* Flatten bottom when panel is open */
+            border-bottom-right-radius: 0;
         }
         .info-panel {
             display: none; /* Hidden by default */
@@ -57,20 +61,19 @@
             border: 1px solid #d1d5db; /* Gray border */
             border-top: none; /* No top border as it connects */
             border-radius: 0 0 0.375rem 0.375rem; /* Rounded bottom corners */
-            padding: 1rem;
+            padding: 1.25rem; /* Increased padding for content */
             margin-top: -1px; /* Overlap slightly with box above */
             font-size: 0.875rem;
             color: #374151; /* Dark gray text */
-            line-height: 1.5;
+            line-height: 1.6; /* Improved line spacing */
+            box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05); /* Softer shadow */
         }
         .info-panel.show {
             display: block; /* Show when active */
         }
         .category-column {
             padding: 0.5rem; /* Reduced padding */
-            /* Removed border for cleaner look, separation by gap */
         }
-        /* Simple arrow indicator */
         .arrow {
             width: 0;
             height: 0;
@@ -83,36 +86,58 @@
         .arrow.up {
             transform: rotate(180deg);
         }
-         /* Style for definition terms */
         .info-panel dt {
             font-weight: 600;
-            margin-top: 0.5rem;
+            margin-top: 0.75rem; /* Increased top margin */
             color: #111827; /* Slightly darker */
         }
-        /* Style for definition descriptions */
         .info-panel dd {
-            margin-left: 1rem;
-            margin-bottom: 0.5rem;
+            margin-left: 0; /* Adjusted for symbol list */
+            margin-bottom: 0.75rem; /* Increased bottom margin */
         }
-         /* Style for examples */
         .info-panel .example {
             background-color: #f3f4f6;
             border-left: 3px solid #9ca3af;
-            padding: 0.5rem 1rem;
-            margin: 0.5rem 0;
+            padding: 0.75rem 1rem; /* Increased padding */
+            margin: 0.75rem 0; /* Increased margin */
             font-style: italic;
         }
-         /* Style for list items */
         .info-panel ul {
             list-style-type: disc;
             margin-left: 1.5rem;
-            margin-top: 0.25rem;
+            margin-top: 0.5rem; /* Increased top margin */
+            margin-bottom: 0.75rem; /* Increased bottom margin */
         }
         .info-panel code {
-             background-color: #e5e7eb;
-             padding: 0.1rem 0.3rem;
-             border-radius: 0.25rem;
-             font-family: monospace;
+            background-color: #e5e7eb;
+            padding: 0.1rem 0.3rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+        }
+        .info-panel h4 { /* For formula titles */
+            font-weight: 600;
+            color: #1e40af;
+            margin-top: 1rem;
+            margin-bottom: 0.25rem;
+        }
+        .info-panel .formula-container {
+            background-color: #f9fafb;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            margin-bottom: 0.25rem; /* Reduced margin before explanation */
+            overflow-x: auto; /* For very long formulas */
+        }
+        .info-panel .symbol-explanation {
+            margin-top: 0.1rem;
+            padding-left: 0.5rem;
+        }
+        .info-panel .symbol-explanation ul {
+            list-style-type: none;
+            padding-left: 0.5rem;
+            margin-left: 0;
+        }
+         .info-panel .symbol-explanation li {
+            margin-bottom: 0.2rem;
         }
     </style>
 </head>
@@ -124,7 +149,8 @@
 
         <div class="category-column">
             <div class="topic-box">1. Grundlagen</div>
-            <div class="pl-0"> <div class="sub-topic-wrapper">
+            <div class="pl-0">
+                <div class="sub-topic-wrapper">
                     <div class="sub-topic-box" onclick="toggleInfo('info-grundbegriffe', this)">
                         <span>Grundbegriffe</span>
                         <span class="arrow"></span>
@@ -132,20 +158,14 @@
                     <div id="info-grundbegriffe" class="info-panel">
                         <p>Zentrale Begriffe für das Verständnis von Datenanalysen.</p>
                         <dl>
-                            <dt>Univariate Daten</dt>
-                            <dd>Analyse von nur <strong>einer Variable</strong> pro Beobachtungseinheit (z.B. Verteilung von Klausurpunkten).</dd>
-                            <dt>Bivariate Daten</dt>
-                            <dd>Analyse von <strong>zwei Variablen</strong> gleichzeitig, um Zusammenhänge zu untersuchen (z.B. Lernaufwand und Klausurpunkte).</dd>
-                            <dt>Multivariate Daten</dt>
-                            <dd>Analyse von <strong>drei oder mehr Variablen</strong> gleichzeitig (z.B. Einfluss von Lernaufwand, Abi-Note, Motivation auf Klausurerfolg).</dd>
                             <dt>Grundgesamtheit (Population)</dt>
-                            <dd>Vollständige Menge aller potenziellen Untersuchungseinheiten (z.B. alle Wahlberechtigten).</dd>
+                            <dd>Menge aller potenziellen Untersuchungseinheiten (Personen, Objekte etc.), über die eine Aussage getroffen werden soll.</dd>
                             <dt>Stichprobe (Sample)</dt>
-                            <dd>Teilmenge der Grundgesamtheit, die tatsächlich untersucht wird.</dd>
+                            <dd>Eine Teilmenge der Grundgesamtheit, die tatsächlich untersucht wird, um Rückschlüsse auf die Grundgesamtheit zu ziehen.</dd>
                             <dt>Merkmal (Variable)</dt>
-                            <dd>Eigenschaft, die bei Untersuchungseinheiten erfasst wird (z.B. Körpergröße).</dd>
+                            <dd>Eine Eigenschaft oder ein Kennzeichen, das an den Untersuchungseinheiten beobachtet oder gemessen wird.</dd>
                             <dt>Merkmalsausprägung</dt>
-                            <dd>Konkreter Wert eines Merkmals (z.B. Körpergröße = 175 cm).</dd>
+                            <dd>Konkreter Wert oder die spezifische Kategorie, die ein Merkmal bei einer Untersuchungseinheit annimmt.</dd>
                             <dt>Deskriptive Statistik</dt>
                             <dd>Beschreibende Statistik; Darstellung und Zusammenfassung von Stichprobendaten (Tabellen, Grafiken, Kennzahlen).</dd>
                             <dt>Inferenzstatistik</dt>
@@ -174,53 +194,77 @@
                 <div class="sub-topic-wrapper">
                     <div class="sub-topic-box" onclick="toggleInfo('info-haeufigkeit', this)">
                         <span>Häufigkeitsverteilung univariater Daten</span>
-                         <span class="arrow"></span>
+                        <span class="arrow"></span>
                     </div>
                     <div id="info-haeufigkeit" class="info-panel">
-                        <dl>
-                            <dt>Relative / Absolute Häufigkeit</dt>
-                            <dd><strong>Absolute Häufigkeit (h<sub>i</sub>):</strong> Anzahl, wie oft eine Ausprägung vorkommt.<br>
-                               <strong>Relative Häufigkeit (f<sub>i</sub>):</strong> Anteil der Ausprägung an der Gesamtzahl (f<sub>i</sub> = h<sub>i</sub> / N). Oft in Prozent.</dd>
-                            <dt>Summenhäufigkeit</dt>
-                            <dd><strong>Absolute Summenhäufigkeit (H<sub>i</sub>):</strong> Anzahl der Beobachtungen mit dieser oder einer "kleineren" Ausprägung (aufaddierte absolute Häufigkeiten).<br>
-                               <strong>Relative Summenhäufigkeit (F<sub>i</sub>):</strong> Anteil der Beobachtungen mit dieser oder einer "kleineren" Ausprägung (aufaddierte relative Häufigkeiten, F<sub>i</sub> = H<sub>i</sub> / N).</dd>
-                             <dt>Histogramm</dt>
-                            <dd>Grafische Darstellung klassierter Daten. Besteht aus Rechtecken über Klassenintervallen. Der <strong>Flächeninhalt</strong> jedes Rechtecks ist proportional zur (relativen) Häufigkeit der Klasse. Bei ungleichen Klassenbreiten muss die Höhe als <strong>Häufigkeitsdichte</strong> (Häufigkeit / Klassenbreite) berechnet werden.</dd>
-                        </dl>
+                        <h4>Relative / Absolute Häufigkeit</h4>
+                        <p><strong>Absolute Häufigkeit ($h_j$):</strong> Anzahl, wie oft eine Ausprägung $a_j$ vorkommt.</p>
+                        <p><strong>Relative Häufigkeit ($f_j$):</strong> Anteil der Ausprägung an der Gesamtzahl $n$.</p>
+                        <div class="formula-container">$$ f_j = \frac{h_j}{n} $$</div>
+                        <div class="symbol-explanation">
+                            <ul>
+                                <li>$f_j$: Relative Häufigkeit der Ausprägung $j$</li>
+                                <li>$h_j$: Absolute Häufigkeit der Ausprägung $j$</li>
+                                <li>$n$: Gesamtanzahl der Beobachtungen ($n = \sum h_j$)</li>
+                            </ul>
+                        </div>
+                        <p>Es gilt: $0 \le f_j \le 1$ und $\sum f_j = 1$.</p>
+
+                        <h4>Summenhäufigkeit (Kumulierte Häufigkeit)</h4>
+                        <p><strong>Absolute Summenhäufigkeit ($H_j$):</strong> $H_j = \sum_{k=1}^{j} h_k$</p>
+                        <p><strong>Relative Summenhäufigkeit ($F_j$):</strong> $F_j = \sum_{k=1}^{j} f_k = \frac{H_j}{n}$</p>
+
+                        <h4>Histogramm</h4>
+                        <p>Grafische Darstellung klassierter metrischer Daten. Flächeninhalt der Rechtecke proportional zur Häufigkeit. Bei ungleichen Klassenbreiten ist die Höhe die Häufigkeitsdichte (Häufigkeit / Klassenbreite).</p>
                     </div>
                 </div>
 
                 <div class="sub-topic-wrapper">
                     <div class="sub-topic-box" onclick="toggleInfo('info-lage-streuung', this)">
                         <span>Lageparameter und Streuungsmaße</span>
-                         <span class="arrow"></span>
+                        <span class="arrow"></span>
                     </div>
                     <div id="info-lage-streuung" class="info-panel">
-                         <dl>
-                            <dt>Lagemaße (Zentrale Tendenz)</dt>
-                            <dd>Beschreiben das "Zentrum" der Daten.</dd>
-                            <dd><ul>
-                                <li><strong>Modus (Modalwert):</strong> Häufigste Ausprägung. Für alle Skalenniveaus.</li>
-                                <li><strong>Median:</strong> Wert, der die sortierten Daten halbiert (50% darunter, 50% darüber). Mind. Ordinalskala. Robust gegen Ausreißer. Minimiert Summe der absoluten Abweichungen.</li>
-                                <li><strong>Quartile/Quantile:</strong> Teilen die sortierten Daten in Abschnitte (z.B. Quartile Q1, Q2=Median, Q3 teilen in 4 Viertel). Mind. Ordinalskala.</li>
-                                <li><strong>Arithmetisches Mittel (Durchschnitt):</strong> Summe aller Werte / Anzahl. Metrische Skalen. Empfindlich für Ausreißer. Minimiert Summe der quadrierten Abweichungen (Schwerpunkteigenschaft).</li>
-                                <li><strong>Geometrisches Mittel:</strong> n-te Wurzel des Produkts von n Werten. Für Wachstumsfaktoren/relative Änderungen.</li>
-                                <li><strong>Harmonisches Mittel:</strong> Für Raten (z.B. km/h), wenn über gleiche Strecken/Mengen gemittelt wird.</li>
-                            </ul></dd>
-                             <dt>Streuungsmaße (Dispersion)</dt>
-                            <dd>Beschreiben die Variabilität der Daten.</dd>
-                             <dd><ul>
-                                <li><strong>Spannweite (Range):</strong> Differenz zwischen Maximum und Minimum. Sehr ausreißerempfindlich.</li>
-                                <li><strong>Interquartilsabstand (IQR):</strong> Differenz Q3 - Q1. Spannweite der mittleren 50%. Robust gegen Ausreißer.</li>
-                                <li><strong>Varianz (s²):</strong> Mittlere quadratische Abweichung vom arithmetischen Mittel. Metrische Skalen. Quadrierte Einheit.</li>
-                                <li><strong>Standardabweichung (s):</strong> Wurzel aus der Varianz. Gleiche Einheit wie Daten. Maß für durchschnittliche Abweichung vom Mittelwert. Ausreißerempfindlich.</li>
-                                </ul></dd>
-                             <dt>Boxplot</dt>
-                             <dd>Grafische Darstellung basierend auf Median, Quartilen und IQR. Visualisiert Lage, Streuung und mögliche Ausreißer.</dd>
-                         </dl>
+                        <h4>Lagemaße (Zentrale Tendenz)</h4>
+                        <ul>
+                            <li><strong>Modus ($x_{mod}$):</strong> Häufigste Ausprägung.</li>
+                            <li><strong>Median ($x_{med}$):</strong> Wert, der sortierte Daten halbiert.
+                                <br>Ungerade $n$: $x_{med} = x_{(\frac{n+1}{2})}$
+                                <br>Gerade $n$: $x_{med} = \frac{1}{2} (x_{(\frac{n}{2})} + x_{(\frac{n}{2}+1)})$
+                            </li>
+                            <li><strong>Quartile:</strong> $Q_1$ (25%-Quantil), $Q_2$ (Median), $Q_3$ (75%-Quantil).</li>
+                            <li><strong>Arithmetisches Mittel ($\bar{x}_{arith}$):</strong>
+                                <div class="formula-container">$$ \bar{x}_{arith} = \frac{1}{n} \sum_{i=1}^{n} x_i $$</div>
+                                <div class="symbol-explanation"><ul><li>$\bar{x}_{arith}$: Arithmetisches Mittel</li><li>$n$: Anzahl der Beobachtungswerte</li><li>$x_i$: Wert der i-ten Beobachtung</li><li>$\sum$: Summenzeichen</li></ul></div>
+                            </li>
+                            <li><strong>Geometrisches Mittel ($\bar{x}_{geom}$):</strong>
+                                <div class="formula-container">$$ \bar{x}_{geom} = \sqrt[n]{\prod_{i=1}^{n} x_i} \quad (x_i > 0) $$</div>
+                                <div class="symbol-explanation"><ul><li>$\bar{x}_{geom}$: Geometrisches Mittel</li><li>$n$: Anzahl der Beobachtungswerte</li><li>$x_i$: Wert der i-ten Beobachtung (muss positiv sein)</li><li>$\prod$: Produktzeichen</li></ul></div>
+                            </li>
+                            <li><strong>Harmonisches Mittel ($\bar{x}_{harm}$):</strong>
+                                <div class="formula-container">$$ \bar{x}_{harm} = \frac{n}{\sum_{i=1}^{n} \frac{1}{x_i}} \quad (x_i \neq 0) $$</div>
+                                <div class="symbol-explanation"><ul><li>$\bar{x}_{harm}$: Harmonisches Mittel</li><li>$n$: Anzahl der Beobachtungswerte</li><li>$x_i$: Wert der i-ten Beobachtung (darf nicht Null sein)</li></ul></div>
+                            </li>
+                        </ul>
+                        <h4>Streuungsmaße (Dispersion)</h4>
+                        <ul>
+                            <li><strong>Spannweite ($R$):</strong> $R = x_{max} - x_{min}$</li>
+                            <li><strong>Interquartilsabstand (IQR):</strong> $IQR = Q_3 - Q_1$</li>
+                            <li><strong>Empirische Varianz ($s^2$):</strong>
+                                <div class="formula-container">$$ s^2 = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2 $$</div>
+                                <div class="symbol-explanation"><ul><li>$s^2$: Empirische Varianz</li><li>$n$: Anzahl der Beobachtungswerte</li><li>$x_i$: Wert der i-ten Beobachtung</li><li>$\bar{x}$: Arithmetisches Mittel der Stichprobe</li></ul></div>
+                            </li>
+                            <li><strong>Empirische Standardabweichung ($s$):</strong>
+                                <div class="formula-container">$$ s = \sqrt{s^2} $$</div>
+                                <div class="symbol-explanation"><ul><li>$s$: Empirische Standardabweichung</li><li>$s^2$: Empirische Varianz</li></ul></div>
+                            </li>
+                        </ul>
+                        <h4>Boxplot</h4>
+                        <p>Grafische Darstellung basierend auf Median, Quartilen, IQR. Visualisiert Lage, Streuung, Ausreißer.</p>
                     </div>
                 </div>
-                 <div class="sub-topic-wrapper">
+
+                <div class="sub-topic-wrapper">
                     <div class="sub-topic-box" onclick="toggleInfo('info-staengel-blatt', this)">
                         <span>Stängel-Blatt-Diagramm</span>
                         <span class="arrow"></span>
@@ -245,85 +289,350 @@
         <div class="category-column">
             <div class="topic-box">2. Standardisierungen</div>
             <div class="pl-0">
-                <div class="sub-topic-box">Variationskoeffizient</div>
-                <div class="sub-topic-box">Z-Transformation</div>
-                <div class="sub-topic-box">(Standard) Normalverteilung</div>
-                <div class="sub-topic-box">Exkurs: diskrete und stetige Zufallsvariablen bzw. Wahrscheinlichkeits(dichte)funktion</div>
-                <div class="sub-topic-box">z-Werte bei Standardnormalverteilung</div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-variationskoeffizient', this)">
+                        <span>Variationskoeffizient</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-variationskoeffizient" class="info-panel">
+                        <p>Relatives Streuungsmaß, um Streuungen von Datenreihen mit unterschiedlichen Mittelwerten zu vergleichen. Nur sinnvoll für $\bar{x} > 0$.</p>
+                        <div class="formula-container">$$ V = \frac{s}{|\bar{x}|} $$</div>
+                        <div class="symbol-explanation"><ul><li>$V$: Variationskoeffizient</li><li>$s$: Standardabweichung der Stichprobe</li><li>$|\bar{x}|$: Betrag des arithmetischen Mittels der Stichprobe</li></ul></div>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-z-transformation', this)">
+                        <span>Z-Transformation</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-z-transformation" class="info-panel">
+                        <p>Transformation in eine Variable mit Mittelwert 0 und Standardabweichung 1.</p>
+                        <div class="formula-container">$$ z_i = \frac{x_i - \bar{x}}{s} $$</div>
+                        <div class="symbol-explanation"><ul><li>$z_i$: z-transformierter Wert (Standardwert) der i-ten Beobachtung</li><li>$x_i$: Ursprünglicher Wert der i-ten Beobachtung</li><li>$\bar{x}$: Arithmetisches Mittel der Stichprobe</li><li>$s$: Standardabweichung der Stichprobe</li></ul></div>
+                        <p>Für Populationsdaten: $z_i = (x_i - \mu)/\sigma$</p>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-normalverteilung', this)">
+                        <span>(Standard) Normalverteilung</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-normalverteilung" class="info-panel">
+                        <h4>Normalverteilung (NV)</h4>
+                        <p>Dichtefunktion (PDF) mit Mittelwert $\mu$ und Varianz $\sigma^2$:</p>
+                        <div class="formula-container">$$ f(x | \mu, \sigma^2) = \frac{1}{\sigma \sqrt{2\pi}} e^{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2} $$</div>
+                        <div class="symbol-explanation"><ul><li>$f(x | \mu, \sigma^2)$: Dichtefunktion der Normalverteilung</li><li>$x$: Wert der Zufallsvariable</li><li>$\mu$: Erwartungswert (Mittelwert) der Grundgesamtheit</li><li>$\sigma^2$: Varianz der Grundgesamtheit</li><li>$\sigma$: Standardabweichung der Grundgesamtheit</li><li>$e$: Eulersche Zahl ($\approx 2.71828$)</li><li>$\pi$: Kreiszahl Pi ($\approx 3.14159$)</li></ul></div>
+                        <h4>Standardnormalverteilung</h4>
+                        <p>Normalverteilung mit $\mu=0$ und $\sigma^2=1$. Dichtefunktion $\phi(z)$:</p>
+                        <div class="formula-container">$$ \phi(z) = \frac{1}{\sqrt{2\pi}} e^{-\frac{1}{2}z^2} $$</div>
+                        <div class="symbol-explanation"><ul><li>$\phi(z)$: Dichtefunktion der Standardnormalverteilung</li><li>$z$: z-transformierter Wert</li></ul></div>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-exkurs-zv', this)">
+                        <span>Exkurs: diskrete und stetige ZV</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-exkurs-zv" class="info-panel">
+                        <p><strong>Diskrete Zufallsvariable:</strong> Endlich oder abzählbar unendlich viele Werte. Wahrscheinlichkeitsfunktion $P(X=x_i)$. Es gilt $\sum P(X=x_i) = 1$.</p>
+                        <p><strong>Stetige Zufallsvariable:</strong> Jeder Wert in einem Intervall. Wahrscheinlichkeitsdichtefunktion (PDF) $f(x)$. Wahrscheinlichkeit $P(a \le X \le b) = \int_a^b f(x)dx$. Es gilt $f(x) \ge 0$ und $\int_{-\infty}^{\infty} f(x)dx = 1$.</p>
+                    </div>
+                </div>
+                 <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-z-werte-nv', this)">
+                        <span>z-Werte bei Standardnormalverteilung</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-z-werte-nv" class="info-panel">
+                        <p>z-Werte sind die Werte auf der x-Achse einer Standardnormalverteilung. Die Verteilungsfunktion $\Phi(z)$ gibt die Wahrscheinlichkeit $P(Z \le z)$ an, also die Fläche unter der Dichtekurve bis zum Punkt $z$. Diese Werte sind tabelliert oder können mit Software berechnet werden.</p>
+                        <p>Beispiele für wichtige z-Werte (Quantile $z_q$ so dass $\Phi(z_q)=q$):</p>
+                        <ul>
+                            <li>Für ein 90%-Konfidenzintervall (zweiseitig, $\alpha=0.10$): $z_{1-\alpha/2} = z_{0.95} \approx 1.645$</li>
+                            <li>Für ein 95%-Konfidenzintervall (zweiseitig, $\alpha=0.05$): $z_{1-\alpha/2} = z_{0.975} \approx 1.96$</li>
+                            <li>Für ein 99%-Konfidenzintervall (zweiseitig, $\alpha=0.01$): $z_{1-\alpha/2} = z_{0.995} \approx 2.576$</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="category-column">
             <div class="topic-box">3. Schätzstatistik</div>
-             <div class="pl-0">
-                <div class="sub-topic-box">Stichprobenverteilung</div>
-                <div class="sub-topic-box">Punktschätzung</div>
-                <div class="sub-topic-box">Konfidenzintervall</div>
+            <div class="pl-0">
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-stichprobenverteilung', this)">
+                        <span>Stichprobenverteilung</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-stichprobenverteilung" class="info-panel">
+                        <p>Wahrscheinlichkeitsverteilung einer Stichprobenstatistik (z.B. Mittelwert $\bar{X}$).</p>
+                        <p><strong>Standardfehler des Mittelwerts ($\sigma_{\bar{X}}$):</strong> Standardabweichung der Verteilung der Stichprobenmittelwerte.</p>
+                        <div class="formula-container">$$ \sigma_{\bar{X}} = \frac{\sigma}{\sqrt{n}} $$</div>
+                        <div class="symbol-explanation"><ul><li>$\sigma_{\bar{X}}$: Standardfehler des Mittelwerts</li><li>$\sigma$: Standardabweichung der Grundgesamtheit</li><li>$n$: Stichprobenumfang</li></ul></div>
+                        <p>Geschätzt durch $SE_{\bar{x}} = s/\sqrt{n}$, wobei $s$ die Stichprobenstandardabweichung ist.</p>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-punktschaetzung', this)">
+                        <span>Punktschätzung</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-punktschaetzung" class="info-panel">
+                        <p>Schätzung eines unbekannten Parameters durch einen einzelnen Wert.</p>
+                        <ul>
+                            <li>Mittelwert $\mu$: geschätzt durch $\bar{x}$.</li>
+                            <li>Varianz $\sigma^2$: geschätzt durch $s^2 = \frac{1}{n-1}\sum(x_i-\bar{x})^2$.</li>
+                            <li>Anteil $\pi$: geschätzt durch $\hat{p} = X/n$ ($X$: Anzahl Erfolge).</li>
+                        </ul>
+                        <p><strong>Gütekriterien:</strong> Erwartungstreue (Schätzer ist im Mittel korrekt), Konsistenz (Schätzer wird genauer mit größerem $n$), Effizienz (kleinste Varianz unter erwartungstreuen Schätzern).</p>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-konfidenzintervall', this)">
+                        <span>Konfidenzintervall</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-konfidenzintervall" class="info-panel">
+                        <p>Bereich, der den wahren Parameter mit Wahrscheinlichkeit $1-\alpha$ (Konfidenzniveau) überdeckt.</p>
+                        <p>Allgemein: Schätzwert $\pm$ (kritischer Wert $\cdot$ Standardfehler).</p>
+                        <h4>KI für $\mu$ ($\sigma$ bekannt)</h4>
+                        <div class="formula-container">$$ KI_{1-\alpha} = \left[ \bar{x} - z_{1-\alpha/2} \cdot \frac{\sigma}{\sqrt{n}}, \quad \bar{x} + z_{1-\alpha/2} \cdot \frac{\sigma}{\sqrt{n}} \right] $$</div>
+                        <div class="symbol-explanation"><ul><li>$KI_{1-\alpha}$: Konfidenzintervall zum Niveau $1-\alpha$</li><li>$\bar{x}$: Stichprobenmittelwert</li><li>$z_{1-\alpha/2}$: Quantil der Standardnormalverteilung</li><li>$\sigma$: Bekannte Standardabweichung der Grundgesamtheit</li><li>$n$: Stichprobenumfang</li></ul></div>
+                        <h4>KI für $\mu$ ($\sigma$ unbekannt)</h4>
+                        <div class="formula-container">$$ KI_{1-\alpha} = \left[ \bar{x} - t_{n-1, 1-\alpha/2} \cdot \frac{s}{\sqrt{n}}, \quad \bar{x} + t_{n-1, 1-\alpha/2} \cdot \frac{s}{\sqrt{n}} \right] $$</div>
+                        <div class="symbol-explanation"><ul><li>$t_{n-1, 1-\alpha/2}$: Quantil der t-Verteilung mit $n-1$ Freiheitsgraden</li><li>$s$: Stichprobenstandardabweichung</li></ul></div>
+                         <h4>KI für Anteil $\pi$ (große $n$)</h4>
+                        <div class="formula-container">$$ KI_{1-\alpha} = \left[ \hat{p} - z_{1-\alpha/2} \cdot \sqrt{\frac{\hat{p}(1-\hat{p})}{n}}, \quad \hat{p} + z_{1-\alpha/2} \cdot \sqrt{\frac{\hat{p}(1-\hat{p})}{n}} \right] $$</div>
+                        <div class="symbol-explanation"><ul><li>$\hat{p}$: Stichprobenanteil</li></ul></div>
+                        <p>Voraussetzung für Approximation: $n\hat{p}(1-\hat{p}) \ge 9$.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="category-column">
             <div class="topic-box">4. Lineare Regression</div>
-             <div class="pl-0">
-                <div class="sub-topic-box">Regressionsanalyse</div>
-                <div class="sub-topic-box">Bestimmtheitsmaß R²</div>
+            <div class="pl-0">
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-regressionsanalyse', this)">
+                        <span>Regressionsanalyse</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-regressionsanalyse" class="info-panel">
+                        <p>Modellierung des linearen Zusammenhangs zwischen abhängiger Variable $Y$ und unabhängiger Variable $X$.</p>
+                        <h4>Modell (Grundgesamtheit)</h4>
+                        <div class="formula-container">$$ y_i = \beta_0 + \beta_1 x_i + \epsilon_i $$</div>
+                        <div class="symbol-explanation"><ul><li>$y_i$: Wert der abhängigen Variable für Beobachtung $i$</li><li>$x_i$: Wert der unabhängigen Variable für Beobachtung $i$</li><li>$\beta_0$: Achsenabschnitt in der Grundgesamtheit</li><li>$\beta_1$: Steigungskoeffizient in der Grundgesamtheit</li><li>$\epsilon_i$: Zufälliger Fehlerterm für Beobachtung $i$</li></ul></div>
+                        <h4>Regressionsgerade (Stichprobe)</h4>
+                        <div class="formula-container">$$ \hat{y}_i = b_0 + b_1 x_i $$</div>
+                        <div class="symbol-explanation"><ul><li>$\hat{y}_i$: Vorhergesagter Wert von $y_i$</li><li>$b_0$: Geschätzter Achsenabschnitt</li><li>$b_1$: Geschätzter Steigungskoeffizient</li></ul></div>
+                        <h4>Koeffizienten (OLS - Methode der kleinsten Quadrate)</h4>
+                        <p>Steigung $b_1$:</p>
+                        <div class="formula-container">$$ b_1 = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^{n}(x_i - \bar{x})^2} = r_{xy} \frac{s_y}{s_x} $$</div>
+                        <div class="symbol-explanation"><ul><li>$r_{xy}$: Korrelationskoeffizient nach Pearson</li><li>$s_y, s_x$: Standardabweichungen von y bzw. x</li></ul></div>
+                        <p>Achsenabschnitt $b_0$:</p>
+                        <div class="formula-container">$$ b_0 = \bar{y} - b_1 \bar{x} $$</div>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-bestimmtheitsmass', this)">
+                        <span>Bestimmtheitsmaß R²</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-bestimmtheitsmass" class="info-panel">
+                        <p>Anteil der Varianz von $Y$, der durch $X$ erklärt wird. Wertebereich [0, 1].</p>
+                        <div class="formula-container">$$ R^2 = \frac{SQE}{SQT} = 1 - \frac{SQR}{SQT} $$</div>
+                        <div class="symbol-explanation">
+                            <ul>
+                                <li>$R^2$: Bestimmtheitsmaß</li>
+                                <li>$SQE = \sum (\hat{y}_i - \bar{y})^2$: Erklärte Quadratsumme (Sum of Squares Explained/Regression)</li>
+                                <li>$SQR = \sum (y_i - \hat{y}_i)^2$: Residuenquadratsumme (Sum of Squares Residual/Error)</li>
+                                <li>$SQT = \sum (y_i - \bar{y})^2$: Totale Quadratsumme (Sum of Squares Total)</li>
+                            </ul>
+                        </div>
+                        <p>Bei Einfachregression: $R^2 = r_{xy}^2$.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="category-column">
             <div class="topic-box">5. Korrelation</div>
-             <div class="pl-0">
-                <div class="sub-topic-box">Kovarianz</div>
-                <div class="sub-topic-box">Korrelationskoeffizient nach P&B</div>
-                <div class="sub-topic-box">Rangkorrelation nach Spearman</div>
+            <div class="pl-0">
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-kovarianz', this)">
+                        <span>Kovarianz</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-kovarianz" class="info-panel">
+                        <p>Maß für den linearen Zusammenhang zweier metrischer Merkmale. Gibt die Richtung des Zusammenhangs an.</p>
+                        <div class="formula-container">$$ Cov(X,Y) = s_{xy} = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y}) $$</div>
+                        <div class="symbol-explanation"><ul><li>$Cov(X,Y)$ oder $s_{xy}$: Empirische Kovarianz zwischen X und Y</li><li>$x_i, y_i$: Wertepaare der Beobachtungen</li><li>$\bar{x}, \bar{y}$: Mittelwerte von X bzw. Y</li><li>$n$: Anzahl der Wertepaare</li></ul></div>
+                        <p>Positive Kovarianz: gleichsinniger linearer Zusammenhang. Negative Kovarianz: gegensinniger linearer Zusammenhang. Kovarianz nahe Null: kein linearer Zusammenhang.</p>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-korrelation-pb', this)">
+                        <span>Korrelationskoeffizient nach P&B</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-korrelation-pb" class="info-panel">
+                        <p>Standardisiertes Maß für Stärke und Richtung eines linearen Zusammenhangs. Wertebereich [-1, 1].</p>
+                        <div class="formula-container">$$ r_{xy} = \frac{Cov(X,Y)}{s_x s_y} $$</div>
+                        <div class="symbol-explanation"><ul><li>$r_{xy}$: Pearson Korrelationskoeffizient</li><li>$Cov(X,Y)$: Kovarianz zwischen X und Y</li><li>$s_x, s_y$: Standardabweichungen von X bzw. Y</li></ul></div>
+                        <p>Alternative Berechnungsformel:</p>
+                        <div class="formula-container">$$ r_{xy} = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i - \bar{x})^2 \sum_{i=1}^{n}(y_i - \bar{y})^2}} $$</div>
+                        <p>$r_{xy}=1$: Perfekter positiver linearer Zusammenhang. $r_{xy}=-1$: Perfekter negativer linearer Zusammenhang. $r_{xy}=0$: Kein linearer Zusammenhang.</p>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-rangkorrelation-spearman', this)">
+                        <span>Rangkorrelation nach Spearman</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-rangkorrelation-spearman" class="info-panel">
+                        <p>Maß für monotonen Zusammenhang (mind. ordinalskaliert). Basiert auf Rängen.</p>
+                        <p>Formel ohne Rangbindungen:</p>
+                        <div class="formula-container">$$ r_s = 1 - \frac{6 \sum_{i=1}^{n} d_i^2}{n(n^2-1)} $$</div>
+                        <div class="symbol-explanation"><ul><li>$r_s$: Spearman's Rangkorrelationskoeffizient</li><li>$d_i = Rg(x_i) - Rg(y_i)$: Differenz der Ränge des i-ten Wertepaares</li><li>$n$: Anzahl der Wertepaare</li></ul></div>
+                        <p>Bei Rangbindungen (mehrere Beobachtungen haben denselben Rang): Pearson-Korrelation wird auf die (ggf. gemittelten) Ränge angewendet.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="category-column">
             <div class="topic-box">6. Kontingenztabelle/-tafel</div>
-             <div class="pl-0">
-                <div class="sub-topic-box">Erwartungswert</div>
-                <div class="sub-topic-box">Kontingenzkoeffizient &chi;&sup2;</div> </div>
+            <div class="pl-0">
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-erwartungswert-kontingenz', this)">
+                        <span>Erwartungswert</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-erwartungswert-kontingenz" class="info-panel">
+                        <p>Erwartete Häufigkeiten $E_{ij}$ in Zelle (Zeile $i$, Spalte $j$) einer Kontingenztafel unter der Annahme, dass die beiden Merkmale voneinander unabhängig sind.</p>
+                        <div class="formula-container">$$ E_{ij} = \frac{h_{i \cdot} \cdot h_{\cdot j}}{n} $$</div>
+                        <div class="symbol-explanation"><ul><li>$E_{ij}$: Erwartete Häufigkeit in Zelle (i,j)</li><li>$h_{i \cdot}$: Randhäufigkeit der Zeile i (Summe der Häufigkeiten in Zeile i)</li><li>$h_{\cdot j}$: Randhäufigkeit der Spalte j (Summe der Häufigkeiten in Spalte j)</li><li>$n$: Gesamtzahl der Beobachtungen</li></ul></div>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-kontingenzkoeffizient-chi2', this)">
+                        <span>Kontingenzkoeffizient &chi;&sup2;</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-kontingenzkoeffizient-chi2" class="info-panel">
+                        <h4>$\chi^2$-Statistik für Unabhängigkeitstest</h4>
+                        <p>Prüfgröße für Zusammenhang ($O_{ij}$: beobachtete Häufigkeit in Zelle (i,j)).</p>
+                        <div class="formula-container">$$ \chi^2_{obs} = \sum_{i=1}^{r} \sum_{j=1}^{c} \frac{(O_{ij} - E_{ij})^2}{E_{ij}} $$</div>
+                        <div class="symbol-explanation"><ul><li>$\chi^2_{obs}$: Beobachtete Teststatistik</li><li>$O_{ij}$: Beobachtete Häufigkeit in Zelle (i,j)</li><li>$E_{ij}$: Erwartete Häufigkeit in Zelle (i,j) unter $H_0$ (Unabhängigkeit)</li><li>$r$: Anzahl der Zeilen</li><li>$c$: Anzahl der Spalten</li></ul></div>
+                        <p>Freiheitsgrade (df): $df = (r-1)(c-1)$.</p>
+                        <h4>Kontingenzkoeffizienten (Stärke des Zusammenhangs)</h4>
+                        <p><strong>Pearson's C:</strong> $C = \sqrt{\frac{\chi^2}{\chi^2 + n}}$ (Maximalwert $<1$, abhängig von $k=\min(r,c)$: $C_{max}=\sqrt{(k-1)/k}$)</p>
+                        <p><strong>Cramér's V:</strong> $V = \sqrt{\frac{\chi^2}{n \cdot (\min(r,c) - 1)}}$ (Wertebereich [0,1])</p>
+                        <p><strong>Phi $\phi$ (für 2x2 Tafeln):</strong> $\phi = \sqrt{\frac{\chi^2}{n}}$</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="category-column">
             <div class="topic-box">7. Testtheorie</div>
-             <div class="pl-0">
-                <div class="sub-topic-box">Binomialtest</div>
-                <div class="sub-topic-box">Gaußtest / z-Test</div>
-                <div class="sub-topic-box">&chi;&sup2;-Test</div> </div>
+            <div class="pl-0">
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-binomialtest', this)">
+                        <span>Binomialtest</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-binomialtest" class="info-panel">
+                        <p>Test für Anteil eines dichotomen Merkmals (zwei Ausprägungen). Nullhypothese $H_0: \pi = \pi_0$.</p>
+                        <p>Prüfgröße: Anzahl der "Erfolge" $X$ in $n$ Versuchen. Die Entscheidung erfolgt durch Vergleich der Wahrscheinlichkeit des beobachteten oder eines extremeren Ergebnisses unter $H_0$ (p-Wert) mit dem Signifikanzniveau $\alpha$. Die Wahrscheinlichkeiten werden mit der Binomialverteilung berechnet: $P(X=k) = \binom{n}{k} \pi_0^k (1-\pi_0)^{n-k}$.</p>
+                        <p>Für große $n$ (Faustregel: $n\pi_0(1-\pi_0) \ge 9$) kann eine Normalapproximation verwendet werden (siehe z-Test für Anteile).</p>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-gauss-z-test', this)">
+                        <span>Gaußtest / z-Test</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-gauss-z-test" class="info-panel">
+                        <p>Test für Erwartungswerte bei bekannter Varianz $\sigma^2$ der Grundgesamtheit oder bei großen Stichproben ($n \ge 30$, dann auch mit $s^2$ statt $\sigma^2$).</p>
+                        <h4>Einstichproben z-Test (für Mittelwert)</h4>
+                        <p>Nullhypothese $H_0: \mu = \mu_0$.</p>
+                        <div class="formula-container">$$ z_{obs} = \frac{\bar{x} - \mu_0}{\sigma/\sqrt{n}} $$</div>
+                        <div class="symbol-explanation"><ul><li>$z_{obs}$: Beobachtete Teststatistik</li><li>$\bar{x}$: Stichprobenmittelwert</li><li>$\mu_0$: Hypothetischer Mittelwert unter $H_0$</li><li>$\sigma$: Bekannte Standardabweichung der Grundgesamtheit</li><li>$n$: Stichprobenumfang</li></ul></div>
+                        <h4>z-Test für Anteilswert (große $n$)</h4>
+                        <p>Nullhypothese $H_0: \pi = \pi_0$. Voraussetzung: $n\pi_0(1-\pi_0) \ge 9$.</p>
+                        <div class="formula-container">$$ z_{obs} = \frac{\hat{p} - \pi_0}{\sqrt{\frac{\pi_0(1-\pi_0)}{n}}} $$</div>
+                        <div class="symbol-explanation"><ul><li>$\hat{p}$: Stichprobenanteil</li><li>$\pi_0$: Hypothetischer Anteil unter $H_0$</li></ul></div>
+                    </div>
+                </div>
+                <div class="sub-topic-wrapper">
+                    <div class="sub-topic-box" onclick="toggleInfo('info-chi2-test-theorie', this)">
+                        <span>&chi;&sup2;-Test</span><span class="arrow"></span>
+                    </div>
+                    <div id="info-chi2-test-theorie" class="info-panel">
+                        <h4>$\chi^2$-Anpassungstest</h4>
+                        <p>Prüft Übereinstimmung beobachteter Häufigkeiten ($O_i$) mit erwarteten Häufigkeiten ($E_i$) einer theoretischen Verteilung.</p>
+                        <div class="formula-container">$$ \chi^2_{obs} = \sum_{i=1}^{k} \frac{(O_i - E_i)^2}{E_i} $$</div>
+                        <div class="symbol-explanation"><ul><li>$O_i$: Beobachtete Häufigkeit in Kategorie i</li><li>$E_i$: Erwartete Häufigkeit in Kategorie i unter $H_0$</li><li>$k$: Anzahl der Kategorien</li></ul></div>
+                        <p>Freiheitsgrade: $df = k - 1 - m$ ($m$: Anzahl der aus den Daten geschätzten Parameter der theoretischen Verteilung).</p>
+                        <h4>$\chi^2$-Unabhängigkeitstest</h4>
+                        <p>Prüft Unabhängigkeit zweier nominaler Merkmale in einer Kontingenztafel. Siehe Kategorie 6 für Details zur Formel und Berechnung der erwarteten Häufigkeiten $E_{ij}$.</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
 
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
     <script>
-        // Simple toggle function for info panels
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false},
+                        {left: "\\[", right: "\\]", display: true},
+                        {left: "\\(", right: "\\)", display: false}
+                    ],
+                    throwOnError: false // Prevents rendering from stopping on a single error
+                });
+            } catch (error) {
+                console.error("KaTeX rendering error:", error);
+            }
+        });
+
         function toggleInfo(panelId, clickedElement) {
             const panel = document.getElementById(panelId);
             const arrow = clickedElement.querySelector('.arrow');
+
+            const parentColumn = clickedElement.closest('.category-column');
+            if (parentColumn) {
+                const allInfoPanelsInColumn = parentColumn.querySelectorAll('.info-panel');
+                allInfoPanelsInColumn.forEach(openPanel => {
+                    if (openPanel.id !== panelId && openPanel.classList.contains('show')) {
+                        openPanel.classList.remove('show');
+                        const correspondingSubTopicBox = openPanel.previousElementSibling;
+                        if (correspondingSubTopicBox) {
+                            correspondingSubTopicBox.classList.remove('active');
+                            const openArrow = correspondingSubTopicBox.querySelector('.arrow');
+                            if (openArrow) openArrow.classList.remove('up');
+                        }
+                    }
+                });
+            }
 
             if (panel.classList.contains('show')) {
                 panel.classList.remove('show');
                 clickedElement.classList.remove('active');
                 if (arrow) arrow.classList.remove('up');
             } else {
-                 // Optional: Close other panels in the same column if needed
-                 // const parentColumn = clickedElement.closest('.category-column');
-                 // if (parentColumn) {
-                 //    parentColumn.querySelectorAll('.info-panel.show').forEach(openPanel => {
-                 //        openPanel.classList.remove('show');
-                 //        openPanel.previousElementSibling.classList.remove('active');
-                 //        const openArrow = openPanel.previousElementSibling.querySelector('.arrow');
-                 //        if (openArrow) openArrow.classList.remove('up');
-                 //    });
-                 // }
-
                 panel.classList.add('show');
                 clickedElement.classList.add('active');
-                 if (arrow) arrow.classList.add('up');
+                if (arrow) arrow.classList.add('up');
+                // Optional: Re-render KaTeX for the specific panel if issues persist with initially hidden content
+                // try {
+                //     renderMathInElement(panel, {
+                //         delimiters: [
+                //             {left: "$$", right: "$$", display: true},
+                //             {left: "$", right: "$", display: false},
+                //             {left: "\\[", right: "\\]", display: true},
+                //             {left: "\\(", right: "\\)", display: false}
+                //         ],
+                //         throwOnError: false
+                //     });
+                // } catch (error) {
+                //     console.error("KaTeX rendering error on panel show:", error);
+                // }
             }
         }
     </script>
 
 </body>
 </html>
+
